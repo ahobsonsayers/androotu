@@ -1,0 +1,98 @@
+name: arm64-probe
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/android-sdk
+      AVD_HOME: ${{ github.workspace }}/.android/avd
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Verify environment
+        run: |
+          uname -m
+          echo "KVM: $([ -e /dev/kvm ] && echo present || echo absent)"
+          df -h / | tail -1
+          free -h | head -2
+
+      - name: Install cmdline-tools + sdkmanager
+        run: |
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          curl -sSL -o /tmp/cmdline-tools.zip \
+            "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_HOME/cmdline-tools"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+
+      - name: Install emulator + arm64 system image
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
+            "emulator" \
+            "platform-tools" \
+            "system-images;android-36;google_apis_playstore;arm64-v8a" > /tmp/sdk-install.log 2>&1
+          tail -3 /tmp/sdk-install.log
+          ls "$ANDROID_HOME/system-images/android-36/google_apis_playstore/arm64-v8a/"
+
+      - name: Create AVD
+        run: |
+          echo "no" | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
+            -n probe -k "system-images;android-36;google_apis_playstore;arm64-v8a" -d pixel_6 --force
+          # remove skin lines (no skins dir on runner) and cap RAM
+          sed -i '/^skin\./d; /^hw\.ramSize=/d' "$ANDROID_HOME/avd/probe.avd/config.ini" 2>/dev/null || \
+          sed -i '/^skin\./d; /^hw\.ramSize=/d' "$HOME/.android/avd/probe.avd/config.ini"
+          echo "hw.ramSize=3072" >> "$HOME/.android/avd/probe.avd/config.ini"
+          grep -E "abi|ramSize" "$HOME/.android/avd/probe.avd/config.ini" | head -5
+
+      - name: Boot emulator (TCG, no KVM on arm runner)
+        run: |
+          export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          nohup "$ANDROID_HOME/emulator/emulator" -avd probe \
+            -no-window -no-audio -no-boot-anim -no-snapshot \
+            -no-metrics -gpu swiftshader_indirect \
+            > /tmp/emulator.log 2>&1 &
+          echo "emulator launched pid $!"
+          # TCG boot is slow; poll up to 30 min
+          BOOTED=""
+          for i in $(seq 1 120); do
+            adb wait-for-device > /dev/null 2>&1 || true
+            B=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            if [ "$B" = "1" ]; then BOOTED="yes"; break; fi
+            if ! pgrep -f qemu-system > /dev/null; then
+              echo "EMULATOR DIED at poll $i"
+              break
+            fi
+            sleep 15
+          done
+          echo "BOOTED=$BOOTED"
+          if [ -n "$BOOTED" ]; then
+            echo "=== boot props ==="
+            adb shell getprop ro.build.fingerprint
+            adb shell getprop ro.product.cpu.abilist
+            adb shell getprop ro.build.version.sdk
+            adb shell getprop sys.boot_completed
+            adb shell uptime
+          else
+            echo "=== emulator log tail ==="
+            tail -50 /tmp/emulator.log
+            exit 1
+          fi
+
+      - name: Upload emulator log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-log
+          path: /tmp/emulator.log
