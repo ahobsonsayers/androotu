@@ -2,6 +2,8 @@
 
 Taskfile-driven rooted Android 13 (API 33) emulator with Magisk. Native + Docker paths.
 
+The Magisk/A13 flow below is *legacy*. Current work — Play Integrity on a rooted emulator — is in `docs/LEARNINGS.md`: the KSU-Next + SUSFS + ReZygisk + PIFork + TEESimulator stack on an **android-36 (A16) x86_64** AVD, the `UNEVALUATED`→`NO_INTEGRITY` journey, and the x86_64 ceiling. Read it before touching that stack.
+
 ## Commands
 
 ```sh
@@ -19,50 +21,50 @@ task clean:native       # remove AVD + rootAVD clone (keeps SDK)
 task clean:docker       # remove image + volume
 ```
 
-Scripts are numbered `scripts/01-setup-sdk.sh` … `scripts/07-verify-root.sh` in execution order. Tasks mirror them as `step:1-setup-sdk` … `step:7-verify`. The Taskfile is thin — just calls scripts. Don't inline logic into Taskfile.yml.
+Scripts numbered `scripts/01-setup-sdk.sh` … `scripts/07-verify-root.sh`. Tasks mirror them as `step:1-setup-sdk` … `step:7-verify`. Taskfile is thin — just calls scripts.
 
-## Critical root flow (don't get wrong)
+## Root flow (don't get wrong)
 
-1. **rootAVD requires the emulator ONLINE** (needs ADB connection). Flow: boot unrooted (`-wipe-data`) → run `rootAVD.sh` while running → rootAVD patches ramdisk, installs `Magisk.apk`, shuts emulator down → cold boot (NO wipe).
-2. **`-wipe-data` wipes Magisk.apk from userdata.** Only use for the first unrooted boot. Never after Magisk is installed.
-3. **`rootAVD.sh` prepends `$ANDROID_HOME` to its first arg.** Pass a RELATIVE path: `system-images/android-33/google_apis_playstore/x86_64/ramdisk.img`. Absolute paths double-prepend and rootAVD silently prints help + exits.
-4. **`echo 1 |` before `rootAVD.sh`** auto-selects Magisk Stable from the interactive version menu. Without it, rootAVD prints help and exits.
-5. **Clean `/data/data/com.android.shell/Magisk` on device before each rootAVD run.** Stale files from a prior failed run cause `ramdisk.img uses UNKNOWN compression` → abort. Both `scripts/04-root-avd.sh` and `docker/entrypoint.sh` do this.
-6. After rootAVD + cold boot, `su -c id` returns "Permission denied" — Magisk env not complete. `scripts/06-setup-magisk.sh` finishes it via UI automation (Direct Install + grant shell su).
+1. **rootAVD needs the emulator ONLINE.** Boot unrooted (`-wipe-data`) → run `rootAVD.sh` while running → it patches ramdisk, installs `Magisk.apk`, shuts down → cold boot (NO wipe).
+2. **`-wipe-data` wipes Magisk.apk from userdata.** Only for the first unrooted boot.
+3. **`rootAVD.sh` prepends `$ANDROID_HOME` to arg 1.** Pass a RELATIVE path: `system-images/android-33/google_apis_playstore/x86_64/ramdisk.img`. Absolute → double-prepend → silent help + exit.
+4. **`echo 1 |` before `rootAVD.sh`** selects Magisk Stable. Without it, help + exit.
+5. **Clean `/data/data/com.android.shell/Magisk` before each run.** Stale files → `ramdisk.img uses UNKNOWN compression` → abort.
+6. After rootAVD + cold boot, `su -c id` = "Permission denied" — Magisk env incomplete. `scripts/06-setup-magisk.sh` finishes via UI automation (Direct Install + grant shell su).
 
-## Emulator boot gotchas
+## Boot gotchas
 
-- **Detach with `setsid nohup ... < /dev/null &`** — plain `&` gets killed when the launcher shell exits. `disown` is bash-only and NOT available in dash (Taskfile runs cmds with `/bin/sh`).
-- **`adb wait-for-device` returns before authorization.** Poll `getprop sys.boot_completed` in a loop (120×3s).
-- **After `boot_completed=1`, adb shell can still return "device offline" for several seconds.** Poll `adb shell true` until it succeeds (30×2s). See `wait_device_ready()` in `06-setup-magisk.sh` and `wait_boot()` in entrypoint.sh.
-- **`-avd rooted33`** (space) not `-avd-rooted33`.
-- Emulator bumps 1536MB → 2048MB internally regardless of `-memory` flag.
+- **Detach with `setsid nohup ... < /dev/null &`** — plain `&` dies with the launcher shell. `disown` is bash-only; Taskfile runs `/bin/sh`.
+- **`adb wait-for-device` returns before authorization.** Poll `getprop sys.boot_completed` (120×3s).
+- **After `boot_completed=1`, adb may return "device offline"** for a few seconds. Poll `adb shell true` (30×2s).
+- **`-avd rooted33`** (space), not `-avd-rooted33`.
+- Emulator bumps 1536MB → 2048MB internally regardless of `-memory`.
 
-## setup-magisk.sh (06-setup-magisk.sh) UI automation
+## setup-magisk.sh UI automation (06)
 
-- Coordinates target **pixel_6 @ 1080×2400**. For other devices, re-derive via `adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml`.
-- **Fragile under RAM pressure** (<~1GB free host RAM): `uiautomator dump` gets OOM-killed, producing a phantom "dumped" message with no file. `dump_ui()` retries 5× and bails out after 5 consecutive failures. On hosts with ~3GB+ free RAM, the full automated flow works without intervention.
-- **"Requires Additional Setup" dialog blocks `home_magisk_button`** — dismiss with `dialog_base_button_1` at (890,1348) before checking if Magisk is installed.
-- **Shell entry only appears in Magisk Superuser list AFTER `su -c id` has been triggered (and rejected) at least once** — it registers shell as a known su requester. `06-setup-magisk.sh` does this 3× before looking for `policy_indicator`.
-- **Idempotency signal:** `home_magisk_installed_version` LinearLayout is present on Magisk home ONLY when Magisk is already installed. The Install button always shows "Install" regardless of state — not a reliable signal.
-- **LET'S GO button has empty resource-id** — match by `text="LET'S GO"`, not by resource-id.
-- Step C (Automatic Response = Grant) is optional and non-blocking. Root works without it.
+- Targets **pixel_6 @ 1080×2400**. Other devices: re-derive coords via `adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml`.
+- **Fragile under RAM pressure** (<~1GB free): `uiautomator dump` gets OOM-killed, phantom "dumped" with no file. `dump_ui()` retries 5×.
+- **"Requires Additional Setup" dialog blocks `home_magisk_button`** — dismiss via `dialog_base_button_1` at (890,1348) first.
+- **Shell su entry appears only AFTER `su -c id` is triggered (and rejected) at least once.** `06` does this 3×.
+- **Idempotency signal:** `home_magisk_installed_version` present only when Magisk installed. Install button always shows "Install" — not reliable.
+- **LET'S GO button has empty resource-id** — match by `text="LET'S GO"`.
+- Step C (auto-grant) optional and non-blocking.
 
 ## Docker
 
-- Base image `halimqarroum/docker-android:api-33-playstore`: **SDK at `/opt/android`** (not `/opt/android-sdk`), **AVD home at `/data`** (not `~/.android/avd`).
-- **Dockerfile build context is repo ROOT** (not `docker/`), because Dockerfile COPYs `scripts/` and `docker/entrypoint.sh`. Build from repo root: `docker build -t docker-emulator:latest -f docker/Dockerfile .`
-- Container needs `/dev/kvm` mounted (docker-compose handles this).
-- `avd-data` named volume persists AVD across restarts — re-running skips re-patching. Delete with `task clean:docker` to start fresh.
-- Image CMD is `bash /entrypoint.sh` — args passed via `docker run ... bash -c '...'` are IGNORED.
+- Base `halimqarroum/docker-android:api-33-playstore`: **SDK at `/opt/android`**, **AVD home at `/data`**.
+- **Dockerfile build context is repo ROOT** (COPYs `scripts/` + `docker/entrypoint.sh`): `docker build -t docker-emulator:latest -f docker/Dockerfile .`
+- Container needs `/dev/kvm` (docker-compose handles).
+- `avd-data` volume persists AVD — re-run skips re-patching. Delete with `task clean:docker` to reset.
+- Image CMD is `bash /entrypoint.sh` — `docker run ... bash -c '...'` args are IGNORED.
 
-## Style / conventions
+## Style
 
 - Scripts: `#!/usr/bin/env bash`, `set -euo pipefail`, chmod +x.
-- No comments unless asked (per global AGENTS.md). Existing `ponytail:`-style comments in scripts mark intentional simplifications.
-- Verify scripts with `bash -n scripts/*.sh docker/entrypoint.sh` after edits.
+- No comments unless asked. `ponytail:` comments mark intentional simplifications.
+- Verify scripts: `bash -n scripts/*.sh docker/entrypoint.sh`.
 
 ## Git
 
 - **Never commit without explicit user instruction** (override rule from global AGENTS.md).
-- No commits exist yet on `main` — the entire project is uncommitted working tree.
+- No commits on `main` yet — entire project is uncommitted working tree.

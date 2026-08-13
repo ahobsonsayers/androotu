@@ -1,1 +1,9 @@
 .superpowers/
+kernel-build/out/
+kernel-build/sources/
+kernel-build/.ccache/
+kernel-build/build.log
+kernel-build/build*.log
+*.qcow2
+*.img
+/tmp/
