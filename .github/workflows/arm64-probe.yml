@@ -43,14 +43,14 @@ jobs:
           echo "hw.ramSize=4096" >> "$HOME/.android/avd/probe.avd/config.ini"
           grep -E "abi|ramSize|hw.cpu" "$HOME/.android/avd/probe.avd/config.ini" | head -5
 
-      - name: Boot emulator (Apple Silicon HVF)
+      - name: Boot emulator (TCG software emulation)
         run: |
           export ANDROID_HOME ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
           nohup "$ANDROID_HOME/emulator/emulator" -avd probe \
             -no-window -no-audio -no-boot-anim -no-snapshot \
             -no-metrics -gpu swiftshader_indirect \
-            -accel off \
+            -qemu -accel tcg \
             > /tmp/emulator.log 2>&1 &
           echo "emulator launched pid $!"
           BOOTED=""
