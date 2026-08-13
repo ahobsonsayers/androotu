@@ -6,7 +6,7 @@ on:
 jobs:
   probe:
     runs-on: macos-15
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,10 +50,11 @@ jobs:
           nohup "$ANDROID_HOME/emulator/emulator" -avd probe \
             -no-window -no-audio -no-boot-anim -no-snapshot \
             -no-metrics -gpu swiftshader_indirect \
+            -accel off \
             > /tmp/emulator.log 2>&1 &
           echo "emulator launched pid $!"
           BOOTED=""
-          for i in $(seq 1 240); do
+          for i in $(seq 1 540); do
             adb wait-for-device > /dev/null 2>&1 || true
             B=$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
             if [ "$B" = "1" ]; then BOOTED="yes"; break; fi
