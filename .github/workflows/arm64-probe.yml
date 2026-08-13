@@ -9,7 +9,6 @@ jobs:
     timeout-minutes: 45
     env:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      AVD_HOME: ${{ github.workspace }}/.android/avd
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +21,7 @@ jobs:
 
       - name: Verify environment
         run: |
+          set -e
           uname -m
           echo "KVM: $([ -e /dev/kvm ] && echo present || echo absent)"
           df -h / | tail -1
@@ -29,20 +29,21 @@ jobs:
 
       - name: Install cmdline-tools + sdkmanager
         run: |
+          set -e
           mkdir -p "$ANDROID_HOME/cmdline-tools"
           curl -sSL -o /tmp/cmdline-tools.zip \
             "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
           unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_HOME/cmdline-tools"
           mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /tmp/licenses.log 2>&1 || { echo "LICENSE FAIL:"; tail -20 /tmp/licenses.log; exit 1; }
 
       - name: Install emulator + arm64 system image
         run: |
+          set -e
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install \
             "emulator" \
             "platform-tools" \
-            "system-images;android-36;google_apis_playstore;arm64-v8a" > /tmp/sdk-install.log 2>&1
-          tail -3 /tmp/sdk-install.log
+            "system-images;android-36;google_apis_playstore;arm64-v8a" 2>&1 | tee /tmp/sdk-install.log | tail -3
           ls "$ANDROID_HOME/system-images/android-36/google_apis_playstore/arm64-v8a/"
 
       - name: Create AVD
