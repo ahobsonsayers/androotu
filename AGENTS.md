@@ -1,68 +1,55 @@
 # AGENTS.md
 
-Taskfile-driven rooted Android 13 (API 33) emulator with Magisk. Native + Docker paths.
+Taskfile-driven rooted Android 16 (API 36, x86_64) emulator passing **MEETS_DEVICE_INTEGRITY** via Integrity Box on a KSU-Next + SUSFS kernel.
 
-The Magisk/A13 flow below is *legacy*. Current work — Play Integrity on a rooted emulator — is in `docs/LEARNINGS.md`: the KSU-Next + SUSFS + ReZygisk + PIFork + TEESimulator stack on an **android-36 (A16) x86_64** AVD, the `UNEVALUATED`→`NO_INTEGRITY` journey, and the x86_64 ceiling. Read it before touching that stack.
+Read `docs/LEARNINGS.md` before touching the stack — it has the full `UNEVALUATED`→`NO_INTEGRITY`→`MEETS_DEVICE_INTEGRITY` journey, the x86_64 ceiling, and every pitfall.
 
 ## Commands
 
 ```sh
-task install:native     # one-time: step:1 + step:2 + step:3
-task run:native         # full root flow: step:4 → step:5 → step:6 → step:7
-task step:7-verify      # check su -c id, magisk -v, Play Store + GMS
-
-task install:docker     # build docker image
-task run:docker         # docker compose up -d (entrypoint does full flow)
-task docker:logs        # tail container logs
-task docker:verify      # run verify-root inside container
-task docker:adb         # adb shell in container
-task docker:down        # stop container
-task clean:native       # remove AVD + rootAVD clone (keeps SDK)
-task clean:docker       # remove image + volume
+task install          # one-time: create the a36 AVD (scripts/01)
+task boot             # boot headless with custom kernel (scripts/02)
+task install:modules  # Integrity Box + WebUI/manager, reboot (scripts/03)
+task configure        # Supreme profile + toggles + GMS restart (scripts/04)
+task verify           # stack + TEESimulator GENERATE check (scripts/05)
+task run              # install → boot → install:modules → configure → verify
+task clean            # remove a36 AVD (keeps SDK + kernel)
 ```
 
-Scripts numbered `scripts/01-setup-sdk.sh` … `scripts/07-verify-root.sh`. Tasks mirror them as `step:1-setup-sdk` … `step:7-verify`. Taskfile is thin — just calls scripts.
+Scripts numbered `scripts/01-create-avd.sh` … `scripts/05-verify-integrity.sh`. Taskfile is thin — just calls scripts.
 
-## Root flow (don't get wrong)
+## The stack (don't get wrong)
 
-1. **rootAVD needs the emulator ONLINE.** Boot unrooted (`-wipe-data`) → run `rootAVD.sh` while running → it patches ramdisk, installs `Magisk.apk`, shuts down → cold boot (NO wipe).
-2. **`-wipe-data` wipes Magisk.apk from userdata.** Only for the first unrooted boot.
-3. **`rootAVD.sh` prepends `$ANDROID_HOME` to arg 1.** Pass a RELATIVE path: `system-images/android-33/google_apis_playstore/x86_64/ramdisk.img`. Absolute → double-prepend → silent help + exit.
-4. **`echo 1 |` before `rootAVD.sh`** selects Magisk Stable. Without it, help + exit.
-5. **Clean `/data/data/com.android.shell/Magisk` before each run.** Stale files → `ramdisk.img uses UNKNOWN compression` → abort.
-6. After rootAVD + cold boot, `su -c id` = "Permission denied" — Magisk env incomplete. `scripts/06-setup-magisk.sh` finishes via UI automation (Direct Install + grant shell su).
+1. **Kernel** `kernel-build/out/bzImage-a36-btf` is required — stock A36 kernel has no KSU/SUSFS. Boot command needs `-kernel ... -ramdisk <system-image>/ramdisk.img`.
+2. **Module install** = `adb shell su -c 'ksud module install /path.zip'` (KSU root, not Magisk). `su` works via `adb shell su -c` once the custom kernel boots.
+3. **Keybox is auto-managed** by the Integrity Box installer (GitHub auto-fetch). Never hand-edit `/data/adb/tricky_store/keybox.xml` or back it up — the module owns it.
+4. **Integrity Box module id = `playintegrityfix`** — cannot coexist with a separate PIF module.
+5. **Manager APK must be KernelSU-Next v3.2.0** (matches kernel ksud 33150). v3.3.0 refuses to work.
+6. **WebUI access:** `adb shell am start -n io.github.a13e300.ksuwebui/.WebUIActivity -e id "playintegrityfix"`.
+
+## The toggle combo that passes (canonical)
+
+`module/custom.pif.prop` is the single source of truth. The working combo:
+`spoofProvider=1` + `spoofPixel=1` + `spoofSignature=1` (+ `spoofBuild=1`, `spoofProps=1`, `spoofVendingFinger=1`, `spoofVendingSdk=0`). After editing, restart GMS: `am force-stop com.google.android.gms.unstable; am force-stop com.android.vending`. **Supreme profile marker** = `/data/adb/Box-Brain/advanced` exists.
 
 ## Boot gotchas
 
 - **Detach with `setsid nohup ... < /dev/null &`** — plain `&` dies with the launcher shell. `disown` is bash-only; Taskfile runs `/bin/sh`.
-- **`adb wait-for-device` returns before authorization.** Poll `getprop sys.boot_completed` (120×3s).
-- **After `boot_completed=1`, adb may return "device offline"** for a few seconds. Poll `adb shell true` (30×2s).
-- **`-avd rooted33`** (space), not `-avd-rooted33`.
+- **`adb wait-for-device` returns before authorization.** Poll `getprop sys.boot_completed` (120×3s), then `adb shell true` (30×2s) for the offline-race.
+- **`-avd a36`** (space), not `-avd-a36`.
 - Emulator bumps 1536MB → 2048MB internally regardless of `-memory`.
+- Never run the emulator in a long bash call — tool timeout kills it.
 
-## setup-magisk.sh UI automation (06)
+## WebUI gotchas
 
-- Targets **pixel_6 @ 1080×2400**. Other devices: re-derive coords via `adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml`.
-- **Fragile under RAM pressure** (<~1GB free): `uiautomator dump` gets OOM-killed, phantom "dumped" with no file. `dump_ui()` retries 5×.
-- **"Requires Additional Setup" dialog blocks `home_magisk_button`** — dismiss via `dialog_base_button_1` at (890,1348) first.
-- **Shell su entry appears only AFTER `su -c id` is triggered (and rejected) at least once.** `06` does this 3×.
-- **Idempotency signal:** `home_magisk_installed_version` present only when Magisk installed. Install button always shows "Install" — not reliable.
-- **LET'S GO button has empty resource-id** — match by `text="LET'S GO"`.
-- Step C (auto-grant) optional and non-blocking.
-
-## Docker
-
-- Base `halimqarroum/docker-android:api-33-playstore`: **SDK at `/opt/android`**, **AVD home at `/data`**.
-- **Dockerfile build context is repo ROOT** (COPYs `scripts/` + `docker/entrypoint.sh`): `docker build -t docker-emulator:latest -f docker/Dockerfile .`
-- Container needs `/dev/kvm` (docker-compose handles).
-- `avd-data` volume persists AVD — re-run skips re-patching. Delete with `task clean:docker` to reset.
-- Image CMD is `bash /entrypoint.sh` — `docker run ... bash -c '...'` args are IGNORED.
+- KsuWebUI root process crashes intermittently (`ClassNotFoundException: RootServerMain`) and button taps stop navigating. Fix: `am force-stop io.github.a13e300.ksuwebui` + relaunch, wait 8–12 s.
+- Some WebUI buttons open Chrome externally (e.g. Set Profile) — go back and relaunch WebUIActivity.
 
 ## Style
 
 - Scripts: `#!/usr/bin/env bash`, `set -euo pipefail`, chmod +x.
 - No comments unless asked. `ponytail:` comments mark intentional simplifications.
-- Verify scripts: `bash -n scripts/*.sh docker/entrypoint.sh`.
+- Verify scripts: `bash -n scripts/*.sh`.
 
 ## Git
 

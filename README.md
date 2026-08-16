@@ -1,89 +1,133 @@
 # rooted-android-emulator
 
-A rooted Android 13 (API 33, x86_64, Google Play) emulator with Magisk, runnable natively or in Docker. Driven by [Taskfile](https://taskfile.dev).
+A rooted Android 16 (API 36, x86_64, Google Play) emulator that passes
+**MEETS_DEVICE_INTEGRITY** on the Play Integrity API, using
+[Integrity Box](https://github.com/MeowDump/Integrity-Box) on a
+KernelSU-Next + SUSFS kernel. Driven by [Taskfile](https://taskfile.dev).
 
-Root via [rootAVD](https://github.com/newbit1/rootAVD): it patches the AVD's `ramdisk.img` with Magisk while the emulator is online, then a UI-automation script finishes Magisk's "Direct Install" and grants `shell` superuser so `adb shell su` works headlessly.
-
-For Play Integrity work (android-36 A16 x86_64, KSU-Next stack), see `docs/LEARNINGS.md`.
+**Result:** the emulator boots a real `google_apis_playstore` A36 image (not a
+bare AOSP build) rooted with KSU, with GMS/DroidGuard fully functional and
+`deviceIntegrity = MEETS_DEVICE_INTEGRITY`.
 
 ## Prerequisites
 
 - Linux x86_64 host with KVM (`/dev/kvm`)
 - ~3 GB free RAM (emulator bumps 1536 → ~2048 MB internally), ~6 GB disk
-- `task`, `docker` + `docker compose` (Docker path only), `python3`, `wget`, `unzip`, `git`
+- `task`, `python3`, `curl`, `git`
+- `ANDROID_HOME` (default `$HOME/Android/Sdk`) with:
+  - the **android-36 `google_apis_playstore` x86_64** system image
+    (`system-images;android-36;google_apis_playstore;x86_64` via sdkmanager)
+  - a prebuilt KSU/SUSFS kernel at `kernel-build/out/bzImage-a36-btf`
+    (build it once with `kernel-build/scripts/build-all.sh`, see below)
 
-## Native
-
-```sh
-task install:native      # one-time: SDK + AVD + rootAVD clone
-task run:native          # boot unrooted → patch ramdisk → cold boot → finish Magisk → verify
-task verify              # su -c id, magisk -v, Play Store + GMS
-```
-
-### What `run:native` does
-
-1. **`step:4-root`** — boot unrooted with `-wipe-data`, clean stale Magisk workspace, run `rootAVD.sh` (`echo 1 |` selects Magisk Stable). Patches ramdisk, installs `Magisk.apk`, shuts down.
-2. **`step:5-boot`** — cold boot (no wipe, keeps `Magisk.apk`). Polls `sys.boot_completed`.
-3. **`step:6-setup-magisk`** — UI automation: Direct Install + reboot, then grant `shell` su via the Superuser screen.
-4. **`step:7-verify`** — checks root, Magisk, Play Store + GMS.
-
-### Individual steps
+## Quick start
 
 ```sh
-task step:1-setup-sdk      # install Android SDK + API 33 Play Store image
-task step:2-create-avd     # create AVD rooted33 (pixel_6, 1536 MB, headless)
-task step:3-clone-rootavd  # clone rootAVD repo
-task step:4-root           # boot unrooted + patch ramdisk
-task step:5-boot           # cold-boot (WIPE_DATA=1 for clean boot)
-task step:6-setup-magisk   # finish Magisk env + grant shell su
-task step:7-verify         # check root + Magisk + Play Store
+task install          # one-time: create the a36 AVD
+task run              # create → boot → install modules → configure → verify
 ```
 
-### Interact
+`task run` runs the full flow. On a fresh emulator use `WIPE_DATA=1` for the
+first boot (the AVD is created clean, so this is usually unnecessary):
 
 ```sh
-adb shell su -c id         # uid=0(root) ... context=u:r:magisk:s0
+WIPE_DATA=1 task boot
 ```
 
-### Clean up
+## What each step does
+
+1. **`01-create-avd.sh`** — create AVD `a36` (pixel_6, 1536 MB, headless
+   config) from the A36 Play Store image.
+2. **`02-boot-emulator.sh`** — boot headless with the custom kernel
+   `bzImage-a36-btf` + stock ramdisk. Polls `sys.boot_completed` and waits for
+   adb to come responsive.
+3. **`03-install-modules.sh`** — push and `ksud module install` Integrity Box
+   v40 (its installer auto-fetches a valid keybox), install KsuWebUIStandalone
+   + KernelSU-Next manager **v3.2.0** (must match the kernel's embedded ksud),
+   reboot.
+4. **`04-configure.sh`** — set the Integrity Box **Supreme** profile (Pixel 8
+   `shiba` CANARY), write the canonical `custom.pif.prop` toggle combo
+   (`spoofProvider=1` + `spoofPixel=1` + `spoofSignature=1`), restart GMS.
+5. **`05-verify-integrity.sh`** — check module presence, GMS, and that
+   TEESimulator is in GENERATE mode (fresh key per request).
+
+To verify the actual verdict, install [SPIC](https://github.com/herzhenr/spic-android)
+and run a request:
 
 ```sh
-task clean:native          # remove AVD + rootAVD clone (keeps SDK)
+adb install spic-v1.4.0.apk
+adb shell am start -n com.henrikherzig.playintegritychecker/.MainActivity
+# tap "Make Play Integrity Request" → expect "Device Integrity: MEETS_DEVICE_INTEGRITY"
 ```
 
-## Docker
+## Result matrix
 
-```sh
-task install:docker     # build image
-task run:docker         # compose up -d; entrypoint runs the full flow
-task docker:logs        # tail container logs
-task docker:verify      # verify-root inside container
-task docker:adb         # adb shell in container
-task docker:down        # stop container
-task clean:docker       # remove image + avd-data volume
-```
-
-Notes:
-- Container mounts `/dev/kvm`, exposes `5554`/`5555`.
-- `avd-data` volume persists the AVD — re-run skips re-patching if ramdisk already modified.
-- Base image [`halimqarroum/docker-android:api-33-playstore`](https://hub.docker.com/r/halimqarroum/docker-android).
-
-## Environment variables
-
-| Variable | Default | Description |
+| Image | Profile | deviceIntegrity |
 |---|---|---|
-| `ANDROID_HOME` | `$HOME/Android/Sdk` | SDK location (host) or `/opt/android` (Docker) |
-| `ROOTAVD_DIR` | `$HOME/rootAVD` | rootAVD clone location |
-| `ANDROID_SERIAL` | `emulator-5554` | adb serial for multi-device hosts |
-| `EMULATOR_RAM` | `1536` | emulator RAM in MB (Docker bumps to 2048 internally) |
-| `AVD_NAME` | `rooted33` | AVD name |
-| `WIPE_DATA` | `0` | `1` = pass `-wipe-data` to `boot` |
+| A13 | tokay / panther (PIFork) | `UNEVALUATED` |
+| A36 | tokay (PIFork) | `NO_INTEGRITY` |
+| A36 | shiba (Integrity Box) | **`MEETS_DEVICE_INTEGRITY`** |
 
-## How root works
+## Why not STRONG
 
-1. `rootAVD.sh` runs **while the emulator is online** (needs ADB). It pushes Magisk binaries, patches `ramdisk.img` in place, streams `Magisk.apk` onto the device, shuts down.
-2. Cold boot loads the patched ramdisk → `magisk -v` reports `25.2:MAGISK:R`.
-3. `06-setup-magisk.sh` runs Magisk's "Direct Install" (writes Magisk into the ramdisk) and grants `shell` su by toggling the `policy_indicator` switch on the Superuser screen.
-4. After that, `adb shell su -c <cmd>` runs as root.
+`MEETS_DEVICE_INTEGRITY` is the realistic x86_64 ceiling. The keybox chain
+roots to a self-signed TEE root, not Google's genuine hardware attestation
+root — Google grants DEVICE but refuses STRONG. Passing STRONG requires a
+keybox chaining to a real Google hardware root (real device TEE or genuine
+leak), which means an arm64 host (Apple Silicon) or a physical Pixel. See
+`docs/LEARNINGS.md` for the full analysis.
 
-UI-automation coordinates target `pixel_6` at `1080×2400`. Other device skins: re-derive with `adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml`.
+## Building the kernel (one-time)
+
+The custom kernel adds KernelSU-Next (kernel-level root + ksud) and SUSFS
+(hiding), plus AVD anti-detection tweaks:
+
+```sh
+cd kernel-build
+./scripts/build-all.sh    # fetch sources → apply patches → build
+```
+
+Output: `kernel-build/out/bzImage-a36-btf` (also `out/bzImage`), plus modules
+in `kernel-build/out/modules/`. Requires a Linux x86_64 host with clang-18+,
+lld, llvm, `dwarves` (pahole) and ~8 GB RAM for the link step. The included
+`kernel-build/Dockerfile` provides the full toolchain.
+
+## Clean up
+
+```sh
+task clean          # remove the a36 AVD (keeps SDK + kernel)
+```
+
+## Credits
+
+This project builds on several excellent open-source projects:
+
+- [MeowDump/Integrity-Box](https://github.com/MeowDump/Integrity-Box) — the PIF
+  module + WebUI that gets `MEETS_DEVICE_INTEGRITY` via its Supreme profile and
+  Attestation API / Pixelify Playstore toggles. The keybox is auto-fetched by
+  its installer.
+- [tanishmeh/AVD_Rooted_Integrity](https://github.com/tanishmeh/AVD_Rooted_Integrity)
+  — the reference repository for rooted STRONG-integrity AVDs (KSU-Next +
+  SUSFS + TEESimulator + PIF on an arm64 android-36 AVD); its
+  `REPRODUCTION.md` and `INTEGRITY_CHAIN.md` guided our stack.
+- [KernelSU-Next/KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
+  — kernel root + `ksud` module manager.
+- [simonpunk/susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) — SUSFS hiding
+  (SUS_PATH/SUS_MOUNT/SUS_KSTAT/SUS_MAP/OPEN_REDIRECT) and the
+  [WildKernels/kernel_patches](https://github.com/WildKernels/kernel_patches)
+  KSU↔SUSFS integration patch.
+- [5ec1cff/TrickyStore](https://github.com/5ec1cff/TrickyStore) — TEESimulator:
+  keybox-based key generation/attestation on emulator hardware (no real TEE).
+- [RevokeForCash/ReZygisk](https://github.com/RevokeForCash/ReZygisk) — Zygisk
+  runtime required by Integrity Box.
+- [5ec1cff/KsuWebUIStandalone](https://github.com/5ec1cff/KsuWebUIStandalone) —
+  WebUI host for managing Integrity Box.
+- [herzhenr/spic-android](https://github.com/herzhenr/spic-android) — SPIC,
+  the Play Integrity verdict checker.
+- [AOSP kernel/common](https://android.googlesource.com/kernel/common)
+  `android15-6.6` — the base kernel; the android-36 `google_apis_playstore`
+  system image.
+- [newbit1/rootAVD](https://github.com/newbit1/rootAVD) — the original Magisk
+  AVD rooting approach (superseded here by KSU).
+- [remote-android/redroid](https://github.com/remote-android/redroid) —
+  Android-in-Docker route evaluated but not chosen.
