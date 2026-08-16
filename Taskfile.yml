@@ -3,115 +3,54 @@ version: '3'
 vars:
   ANDROID_HOME:
     sh: 'echo "${ANDROID_HOME:-$HOME/Android/Sdk}"'
-  AVD_NAME: rooted33
+  AVD_NAME: a36
   SERIAL: emulator-5554
-  EMULATOR_RAM: "1536"
 
 tasks:
   # ─── Install (one-time setup) ────────────────────────────────────────────
 
-  install:native:
-    desc: One-time native setup — install SDK, create AVD, clone rootAVD
+  install:
+    desc: One-time setup — create the a36 AVD
     cmds:
-      - scripts/01-setup-sdk.sh
-      - scripts/02-create-avd.sh
-      - scripts/03-clone-rootavd.sh
+      - scripts/01-create-avd.sh
 
-  install:docker:
-    desc: One-time Docker setup — build the emulator image
+  # ─── Run (full integrity stack) ─────────────────────────────────────────
+
+  run:
+    desc: Full flow — create AVD, boot, install modules, configure, verify
     cmds:
-      - docker compose -f docker/docker-compose.yml build
+      - task: install
+      - task: boot
+      - task: install:modules
+      - task: configure
+      - task: verify
 
-  # ─── Run (boot + root + verify) ───────────────────────────────────────────
-
-  run:native:
-    desc: Run full root flow natively — patch ramdisk, cold boot, setup Magisk, verify
+  boot:
+    desc: Boot the a36 emulator headless with the custom kernel
     cmds:
-      - scripts/04-root-avd.sh
-      - scripts/05-boot-emulator.sh
-      - scripts/06-setup-magisk.sh
-      - scripts/07-verify-root.sh
+      - scripts/02-boot-emulator.sh
 
-  run:docker:
-    desc: Run full root flow in Docker (container boots, patches, sets up Magisk)
+  install:modules:
+    desc: Install Integrity Box + WebUI/manager apps, then reboot
     cmds:
-      - docker compose -f docker/docker-compose.yml up -d
-      - 'echo "Container started. Tail logs: task docker:logs  |  Verify: task docker:verify"'
+      - scripts/03-install-modules.sh
 
-  # ─── Individual steps (callable directly) ─────────────────────────────────
-
-  step:1-setup-sdk:
-    desc: Install Android SDK + API 33 Play Store image
+  configure:
+    desc: Configure Integrity Box (Supreme profile + toggles) and restart GMS
     cmds:
-      - scripts/01-setup-sdk.sh
+      - scripts/04-configure.sh
 
-  step:2-create-avd:
-    desc: Create AVD rooted33 (pixel_6, 1536MB RAM, headless config)
+  verify:
+    desc: Check the stack + TEESimulator GENERATE mode
     cmds:
-      - scripts/02-create-avd.sh
-
-  step:3-clone-rootavd:
-    desc: Clone rootAVD repo (Magisk patcher for AVDs)
-    cmds:
-      - scripts/03-clone-rootavd.sh
-
-  step:4-root:
-    desc: Boot unrooted (wipe), patch ramdisk with Magisk via rootAVD
-    cmds:
-      - scripts/04-root-avd.sh
-
-  step:5-boot:
-    desc: Boot emulator headless. Use WIPE_DATA=1 for clean first boot.
-    cmds:
-      - scripts/05-boot-emulator.sh
-
-  step:6-setup-magisk:
-    desc: Complete Magisk Direct Install + grant shell su (UI automation)
-    cmds:
-      - scripts/06-setup-magisk.sh
-
-  step:7-verify:
-    desc: Check root access, Magisk version, Play Store + GMS
-    cmds:
-      - scripts/07-verify-root.sh
-
-  # ─── Docker helpers ──────────────────────────────────────────────────────
-
-  docker:down:
-    desc: Stop Docker container
-    cmds:
-      - docker compose -f docker/docker-compose.yml down
-
-  docker:logs:
-    desc: Tail emulator logs from Docker container
-    cmds:
-      - docker compose -f docker/docker-compose.yml logs -f
-
-  docker:adb:
-    desc: Open adb shell in Docker container
-    cmds:
-      - docker compose -f docker/docker-compose.yml exec emulator adb shell
-
-  docker:verify:
-    desc: Verify root inside running Docker container
-    cmds:
-      - docker compose -f docker/docker-compose.yml exec emulator /opt/scripts/06-setup-magisk.sh
+      - scripts/05-verify-integrity.sh
 
   # ─── Cleanup ─────────────────────────────────────────────────────────────
 
-  clean:native:
-    desc: Remove AVD + rootAVD clone (keeps SDK). Requires confirmation.
+  clean:
+    desc: Remove the a36 AVD. Requires confirmation.
     prompts:
-      - This deletes ~/.android/avd/rooted33.avd and ~/rootAVD. Continue?
+      - This deletes ~/.android/avd/a36.avd. Continue?
     cmds:
-      - rm -rf ~/.android/avd/rooted33.avd ~/.android/avd/rooted33.ini
-      - rm -rf "${ROOTAVD_DIR:-$HOME/rootAVD}"
-      - 'echo "Native state cleaned (SDK kept at $ANDROID_HOME)."'
-
-  clean:docker:
-    desc: Remove Docker image + volume. Requires confirmation.
-    prompts:
-      - This removes the docker-emulator image and avd-data volume. Continue?
-    cmds:
-      - docker compose -f docker/docker-compose.yml down -v --rmi local
-      - 'echo "Docker state cleaned."'
+      - rm -rf ~/.android/avd/a36.avd ~/.android/avd/a36.ini
+      - 'echo "a36 AVD cleaned."'
