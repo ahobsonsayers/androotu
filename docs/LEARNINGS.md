@@ -58,6 +58,7 @@ Fix: `am force-stop io.github.a13e300.ksuwebui` + relaunch, wait 8–12 s.
 - Reference (tanishmeh/AVD_Rooted_Integrity) passes MEETS_STRONG on arm64-v8a android-36. Author: "x86 detection is not something we can bypass, since apps can natively check for this."
 - GMS ships x86_64 native libs on our device; a real Pixel 9 runs arm64 GMS. DroidGuard can check its own process arch — no prop/chain/bind mount changes that.
 - Emulator hard-blocks arm64 guests on x86_64 at API ≥ 28: `FATAL | Avd's CPU Architecture 'arm64' is not supported by the QEMU2 emulator on x86_64 host` (no flag bypasses). Reference was tested on Apple Silicon.
+- **Running arm64 *apps* is a separate matter from the arm64-*guest* wall**: the A36 x86_64 playstore image ships native-bridge translation (`ro.product.cpu.abilist=x86_64,arm64-v8a`, `ro.enable.native.bridge.exec=1`, `/system/lib64/libndk_translation.so`), so arm64-only apps install and run via the translator on the x86_64 core. This is what dockerify-android enables via ndk_translation too. It doesn't affect the device verdict — GMS itself runs x86_64.
 - **`MEETS_DEVICE_INTEGRITY` is the realistic x86_64 ceiling. STRONG requires a keybox chaining to Google's genuine hardware attestation root** (real device TEE or genuine leak). Both keyboxes we have (Yurikey57, Megatron/IntegrityBox) chain to the same self-signed TEE root `f92009e853b6b045` — Google grants DEVICE but refuses STRONG. Passing STRONG requires an arm64 host.
 
 ## Pitfalls

@@ -1,66 +1,96 @@
-# rooted-android-emulator
+# Rooted Android 16 AVD · Play Integrity
 
-A rooted Android 16 (API 36, x86_64, Google Play) emulator that passes
-**MEETS_DEVICE_INTEGRITY** on the Play Integrity API, using
-[Integrity Box](https://github.com/MeowDump/Integrity-Box) on a
-KernelSU-Next + SUSFS kernel. Driven by [Taskfile](https://taskfile.dev).
+**A reproducible recipe for a rooted Android 16 (API 36, x86_64) emulator that passes Google Play Integrity with `MEETS_DEVICE_INTEGRITY`.**
 
-**Result:** the emulator boots a real `google_apis_playstore` A36 image (not a
-bare AOSP build) rooted with KSU, with GMS/DroidGuard fully functional and
-`deviceIntegrity = MEETS_DEVICE_INTEGRITY`.
+[![Verdict](https://img.shields.io/badge/Play_Integrity-MEETS__DEVICE__INTEGRITY-3fd07f?style=flat-square)](docs/LEARNINGS.md)
+[![Device](https://img.shields.io/badge/device-Pixel_8_·_android--36_·_x86__64-4f8cff?style=flat-square)](module/custom.pif.prop)
+[![Kernel](https://img.shields.io/badge/kernel-custom_6.6_·_KSU--Next_+_SUSFS-7c5cff?style=flat-square)](kernel-build/)
+[![Type](https://img.shields.io/badge/contents-source_+_scripts_only-6b7689?style=flat-square)](#scope)
 
-## Prerequisites
+---
 
-- Linux x86_64 host with KVM (`/dev/kvm`)
-- ~3 GB free RAM (emulator bumps 1536 → ~2048 MB internally), ~6 GB disk
-- `task`, `python3`, `curl`, `git`
-- `ANDROID_HOME` (default `$HOME/Android/Sdk`) with:
-  - the **android-36 `google_apis_playstore` x86_64** system image
-    (`system-images;android-36;google_apis_playstore;x86_64` via sdkmanager)
-  - a prebuilt KSU/SUSFS kernel at `kernel-build/out/bzImage-a36-btf`
-    (build it once with `kernel-build/scripts/build-all.sh`, see below)
+A reproducible recipe for a **rooted Pixel-class Android emulator (AVD) that
+passes Google Play Integrity to `MEETS_DEVICE_INTEGRITY`** and presents as a
+real Pixel 8 (`shiba`) to Play Services. It combines a custom kernel
+(KernelSU-Next + SUSFS + AVD anti-detection patches) with
+[Integrity Box](https://github.com/MeowDump/Integrity-Box), whose WebUI toggles
+drive the PIF profile and whose installer auto-fetches the attestation keybox —
+TEESimulator forges the hardware attestation chain from that keybox.
+
+> **This is a development/testing tool** for reproducing device-integrity
+> behavior on an emulator. `MEETS_DEVICE_INTEGRITY` is the realistic x86_64
+> ceiling — see [Why not STRONG](#why-not-strong).
+
+## What's here
+
+| Path | What |
+|---|---|
+| [`scripts/`](scripts/) | `01-create-avd.sh` (AVD from the A36 Play Store image), `02-boot-emulator.sh` (cold-boot with the custom kernel), `03-install-modules.sh` (Integrity Box + TEESimulator + ReZygisk + SUSFS + manager + WebUI), `04-configure.sh` (Supreme profile + toggle combo), `05-verify-integrity.sh` (read-only health check, incl. the GENERATE-vs-PATCH mode check). |
+| [`module/custom.pif.prop`](module/custom.pif.prop) | The single source of truth for the spoofed device identity — Pixel 8 (`shiba`) CANARY profile + the toggle combo that passes. |
+| [`kernel-build/`](kernel-build/) | Docker + scripts that build AOSP `common-android15-6.6` with KSU-Next, SUSFS, module-vermagic bypass, and AVD anti-detection tweaks. Output: `out/bzImage-a36-btf`. |
+| [`Taskfile.yml`](Taskfile.yml) | Thin wrapper over `scripts/` (`task install` → `task run` → `task verify`). |
+| [`docs/LEARNINGS.md`](docs/LEARNINGS.md) | The full journey and every pitfall. |
 
 ## Quick start
 
-```sh
-task install          # one-time: create the a36 AVD
+```bash
+# 0. One-time prerequisites (see "Building the kernel"):
+#    ANDROID_HOME with system-images;android-36;google_apis_playstore;x86_64
+#    + a prebuilt kernel at kernel-build/out/bzImage-a36-btf
+
+task install          # create the a36 AVD
 task run              # create → boot → install modules → configure → verify
 ```
 
-`task run` runs the full flow. On a fresh emulator use `WIPE_DATA=1` for the
-first boot (the AVD is created clean, so this is usually unnecessary):
+Full walkthrough: the five numbered steps under [Taskfile](#taskfile).
 
-```sh
-WIPE_DATA=1 task boot
+## ⚠️ The traps that waste hours (read before debugging)
+
+1. **NEVER restart `keymint` / `keystore2` / `TEESimulator` after boot.** It
+   flips TEESimulator from **GENERATE** mode (fresh attested key per request)
+   into **PATCH** mode (a cached chain Google rejects) → empty verdict. To
+   apply any change, **cold reboot**. Recovery from a broken verdict is also
+   just a cold reboot — never a service restart.
+2. **Never hand-edit `/data/adb/tricky_store/keybox.xml`.** Integrity Box's
+   installer auto-fetches and manages it. Backing it up or restoring one flips
+   the verdict — a fresh install auto-fetches a working keybox.
+
+After a clean boot, confirm TEESimulator is in GENERATE mode:
+
+```bash
+task verify    # read-only; checks GENERATE-vs-PATCH, modules, props
 ```
 
-## What each step does
+The full story is in [`docs/LEARNINGS.md`](docs/LEARNINGS.md).
 
-1. **`01-create-avd.sh`** — create AVD `a36` (pixel_6, 1536 MB, headless
-   config) from the A36 Play Store image.
-2. **`02-boot-emulator.sh`** — boot headless with the custom kernel
-   `bzImage-a36-btf` + stock ramdisk. Polls `sys.boot_completed` and waits for
-   adb to come responsive.
-3. **`03-install-modules.sh`** — push and `ksud module install` Integrity Box
-   v40 (its installer auto-fetches a valid keybox), install KsuWebUIStandalone
-   + KernelSU-Next manager **v3.2.0** (must match the kernel's embedded ksud),
-   reboot.
-4. **`04-configure.sh`** — set the Integrity Box **Supreme** profile (Pixel 8
-   `shiba` CANARY), write the canonical `custom.pif.prop` toggle combo
-   (`spoofProvider=1` + `spoofPixel=1` + `spoofSignature=1`), restart GMS.
-5. **`05-verify-integrity.sh`** — check module presence, GMS, and that
-   TEESimulator is in GENERATE mode (fresh key per request).
+## The keybox (read this)
 
-To verify the actual verdict, install [SPIC](https://github.com/herzhenr/spic-android)
-and run a request:
+TEESimulator forges the hardware attestation chain from
+`/data/adb/tricky_store/keybox.xml`. **You never touch this file.** Integrity
+Box's installer fetches a working keybox at install time (and its WebUI's
+"Integrity Downloader" can refresh it). A keybox committed to a public repo
+gets harvested and revoked by Google within hours — which is exactly why the
+repo vendors **none** and auto-fetches instead. Because that keybox's chain
+roots to a self-signed TEE root (not Google's genuine hardware attestation
+root), Google grants **DEVICE** but refuses **STRONG**.
 
-```sh
-adb install spic-v1.4.0.apk
-adb shell am start -n com.henrikherzig.playintegritychecker/.MainActivity
-# tap "Make Play Integrity Request" → expect "Device Integrity: MEETS_DEVICE_INTEGRITY"
-```
+## Scope
 
-## Result matrix
+- ✅ **`MEETS_DEVICE_INTEGRITY`** on a rooted x86_64 AVD: custom kernel, KSU
+  root, SUSFS hiding, Integrity Box profile/toggle spoofing, TEESimulator
+  attestation forging, GMS/DroidGuard fully functional.
+- ✅ **arm64 apps run** via the image's native-bridge translation
+  (`x86_64,arm64-v8a` abilist, `libndk_translation.so`) — slower than native
+  x86_64, fine for most apps. Doesn't affect the device verdict.
+- ❌ **No `MEETS_STRONG_INTEGRITY`** — requires a keybox rooted in Google's
+  genuine hardware attestation root (real device TEE or genuine leak), i.e. an
+  arm64 host (Apple Silicon) or a physical Pixel.
+- ❌ **No prebuilt binaries / device images** — source + scripts only.
+
+## Validated configuration
+
+Pixel 8 (`shiba`) CANARY profile, android-36 `google_apis_playstore x86_64`,
+custom 6.6 kernel. Verified verdicts:
 
 | Image | Profile | deviceIntegrity |
 |---|---|---|
@@ -77,6 +107,18 @@ keybox chaining to a real Google hardware root (real device TEE or genuine
 leak), which means an arm64 host (Apple Silicon) or a physical Pixel. See
 `docs/LEARNINGS.md` for the full analysis.
 
+## Taskfile
+
+| Task | Runs |
+|---|---|
+| `task install` | `01-create-avd.sh` |
+| `task boot` | `02-boot-emulator.sh` |
+| `task install:modules` | `03-install-modules.sh` |
+| `task configure` | `04-configure.sh` |
+| `task verify` | `05-verify-integrity.sh` |
+| `task run` | the full chain above |
+| `task clean` | remove the `a36` AVD (keeps SDK + kernel) |
+
 ## Building the kernel (one-time)
 
 The custom kernel adds KernelSU-Next (kernel-level root + ksud) and SUSFS
@@ -91,12 +133,6 @@ Output: `kernel-build/out/bzImage-a36-btf` (also `out/bzImage`), plus modules
 in `kernel-build/out/modules/`. Requires a Linux x86_64 host with clang-18+,
 lld, llvm, `dwarves` (pahole) and ~8 GB RAM for the link step. The included
 `kernel-build/Dockerfile` provides the full toolchain.
-
-## Clean up
-
-```sh
-task clean          # remove the a36 AVD (keeps SDK + kernel)
-```
 
 ## Credits
 
