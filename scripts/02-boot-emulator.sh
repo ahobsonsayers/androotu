@@ -41,7 +41,7 @@ if [ -f "$LOG_FILE" ]; then
   mv -f "$LOG_FILE" "$LOG_FILE.old" 2>/dev/null || true
 fi
 setsid nohup "$EMU" -avd "$AVD" -no-window -no-audio -no-snapshot \
-  -memory 1536 -no-boot-anim -gpu "$GPU_MODE" $EXTRA $KERNEL_ARGS \
+  -memory 1536 -no-boot-anim -no-metrics -gpu "$GPU_MODE" $EXTRA $KERNEL_ARGS \
   > "$LOG_FILE" 2>&1 < /dev/null &
 ( while [ -f "$LOG_FILE" ] && [ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 52428800 ]; do
     truncate -s 52428800 "$LOG_FILE" 2>/dev/null || break; sleep 300

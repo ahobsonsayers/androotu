@@ -1,0 +1,94 @@
+name: verify-integrity
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [build-kernel]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          ls -la /dev/kvm || sudo apt-get update && sudo apt-get install -y --no-install-recommends cpu-checker
+          ls -la /dev/kvm
+          sudo chmod 666 /dev/kvm
+
+      - name: Install SDK + system image
+        run: |
+          set -e
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          mkdir -p "$ANDROID_HOME/cmdline-tools"
+          curl -sSL -o /tmp/ct.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          unzip -q /tmp/ct.zip -d "$ANDROID_HOME/cmdline-tools"
+          mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /tmp/licenses.log 2>&1 || true
+          "$SDKM" --install "platform-tools" "emulator" "system-images;android-36;google_apis_playstore;x86_64" 2>&1 | tail -3
+          ls "$ANDROID_HOME/system-images/android-36/google_apis_playstore/x86_64/"
+
+      - name: Download kernel from rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          mkdir -p kernel-build/out
+          gh release download kernel-latest --pattern bzImage --dir kernel-build/out
+          mv kernel-build/out/bzImage kernel-build/out/bzImage-a36-btf
+          ls -la kernel-build/out/bzImage-a36-btf
+
+      - name: Create AVD
+        run: |
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          bash scripts/01-create-avd.sh
+
+      - name: Boot emulator
+        run: |
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          GPU=swiftshader_indirect EMU_LOG=/tmp/emulator.log bash scripts/02-boot-emulator.sh
+
+      - name: Install modules
+        run: |
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          bash scripts/03-install-modules.sh
+
+      - name: Configure
+        run: |
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          bash scripts/04-configure.sh
+
+      - name: Verify stack
+        run: |
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          bash scripts/05-verify-integrity.sh
+
+      - name: Check Play Integrity verdict
+        run: |
+          export ANDROID_HOME="$HOME/Android/Sdk"
+          export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          bash scripts/06-check-verdict.sh
+
+      - name: Upload emulator log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-log
+          path: /tmp/emulator.log
