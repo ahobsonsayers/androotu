@@ -39,10 +39,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          mkdir -p kernel-build/out
-          gh release download kernel-latest --pattern bzImage --dir kernel-build/out
-          mv kernel-build/out/bzImage kernel-build/out/bzImage-a36-btf
-          ls -la kernel-build/out/bzImage-a36-btf
+          mkdir -p kernel/out
+          gh release download kernel-latest --pattern bzImage --dir kernel/out
+          mv kernel/out/bzImage kernel/out/bzImage-a36-btf
+          ls -la kernel/out/bzImage-a36-btf
 
       - name: Create AVD
         run: |

@@ -9,7 +9,7 @@ EMU="$AH/emulator/emulator"
 AVD="${AVD:-a36}"
 API="${API:-36}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DEFAULT_KERNEL="$ROOT/kernel-build/out/bzImage-a36-btf"
+DEFAULT_KERNEL="$ROOT/kernel/out/bzImage-a36-btf"
 
 "$ADB" emu kill 2>/dev/null || true
 sleep 1
@@ -23,7 +23,7 @@ EXTRA=""
 # Custom kernel (required for KSU/SUSFS root). Defaults to the prebuilt one.
 KERNEL="${KERNEL:-$DEFAULT_KERNEL}"
 if [[ ! -f "$KERNEL" ]]; then
-  echo "ERROR: kernel not found at $KERNEL. Build it first (see kernel-build/)." >&2
+  echo "ERROR: kernel not found at $KERNEL. Build it first (see kernel/)." >&2
   exit 1
 fi
 RAMDISK_FILE="${RAMDISK:-$AH/system-images/android-$API/google_apis_playstore/x86_64/ramdisk.img}"

@@ -12,4 +12,4 @@ echo "=== 3/3 build kernel ==="
 bash "${ROOT}/scripts/build.sh"
 
 echo
-echo "==> Done. Kernel image at: kernel-build/out/bzImage"
+echo "==> Done. Kernel image at: kernel/out/bzImage"

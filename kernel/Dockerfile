@@ -1,3 +1,6 @@
+# Kernel builder: compiles the KSU-Next + SUSFS bzImage from source.
+# Published to GHCR so CI and the emulator image's multi-stage build reuse a
+# cached toolchain. The built kernel is kept at /kernel/bzImage.
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,3 +30,13 @@ ENV CCACHE_DIR=/work/.ccache
 ENV PATH="/usr/lib/ccache:${PATH}"
 
 WORKDIR /work
+
+# Copy the build scripts. build-all.sh computes ROOT as the parent of scripts/,
+# so /work/scripts -> ROOT=/work -> kernel written to /work/out/bzImage.
+COPY kernel/scripts /work/scripts
+
+# Build the kernel. Sources are cloned inside the build (fetch-sources.sh).
+RUN bash /work/scripts/build-all.sh
+
+# Keep the kernel at a stable path for extraction / COPY --from.
+RUN mkdir -p /kernel && cp /work/out/bzImage /kernel/bzImage

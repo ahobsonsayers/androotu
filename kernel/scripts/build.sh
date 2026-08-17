@@ -81,13 +81,13 @@ OUTDIR="${ROOT}/out"
 mkdir -p "${OUTDIR}"
 cp -fv arch/x86/boot/bzImage "${OUTDIR}/bzImage"
 echo
-echo "==> Kernel image copied to kernel-build/out/bzImage"
+echo "==> Kernel image copied to kernel/out/bzImage"
 
 # Install modules to out/modules/
 echo "==> Installing modules to out/modules/"
 rm -rf "${OUTDIR}/modules"
 make -j "${JOBS}" INSTALL_MOD_PATH="${OUTDIR}/modules" modules_install
-echo "==> Modules installed to kernel-build/out/modules/"
+echo "==> Modules installed to kernel/out/modules/"
 
 echo
 echo "Kernel build version banner:"

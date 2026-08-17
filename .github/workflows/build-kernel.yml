@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'kernel-build/**'
+      - 'kernel/**'
 
 jobs:
   build:
@@ -29,7 +29,7 @@ jobs:
 
       - name: Build kernel
         run: |
-          cd kernel-build
+          cd kernel
           ./scripts/build-all.sh
           ls -la out/bzImage
 
@@ -43,6 +43,38 @@ jobs:
           gh release delete "$TAG" --yes 2>/dev/null || true
           git push origin --delete "refs/tags/$TAG" 2>/dev/null || true
           gh release create "$TAG" \
-            kernel-build/out/bzImage \
+            kernel/out/bzImage \
             --title "Kernel (rolling)" \
-            --notes "Rolling build of the KSU-Next + SUSFS kernel (bzImage-a36-btf). Rebuilt on every push to kernel-build/ or manual dispatch."
+            --notes "Rolling build of the KSU-Next + SUSFS kernel (bzImage-a36-btf). Rebuilt on every push to kernel/ or manual dispatch."
+
+  # Build + push the kernel-builder image so CI and the emulator image's
+  # multi-stage build reuse a cached toolchain.
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push kernel-builder image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: kernel/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}-kernel:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

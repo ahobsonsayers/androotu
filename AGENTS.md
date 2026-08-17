@@ -20,7 +20,7 @@ Scripts numbered `scripts/01-create-avd.sh` … `scripts/05-verify-integrity.sh`
 
 ## The stack (don't get wrong)
 
-1. **Kernel** `kernel-build/out/bzImage-a36-btf` is required — stock A36 kernel has no KSU/SUSFS. Boot command needs `-kernel ... -ramdisk <system-image>/ramdisk.img`.
+1. **Kernel** `kernel/out/bzImage-a36-btf` is required — stock A36 kernel has no KSU/SUSFS. Boot command needs `-kernel ... -ramdisk <system-image>/ramdisk.img`.
 2. **Module install** = `adb shell su -c 'ksud module install /path.zip'` (KSU root, not Magisk). `su` works via `adb shell su -c` once the custom kernel boots.
 3. **Keybox is auto-managed** by the Integrity Box installer (GitHub auto-fetch). Never hand-edit `/data/adb/tricky_store/keybox.xml` or back it up — the module owns it.
 4. **Integrity Box module id = `playintegrityfix`** — cannot coexist with a separate PIF module.

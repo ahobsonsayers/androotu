@@ -86,7 +86,7 @@ adb shell uiautomator dump /sdcard/ui.xml && adb shell cat /sdcard/ui.xml   # re
 
 ## Artifacts
 
-- Kernel: `kernel-build/out/bzImage-a36-btf` (x86_64, working), `Image.gz-arm64` (built, unbootable on this host)
+- Kernel: `kernel/out/bzImage-a36-btf` (x86_64, working), `Image.gz-arm64` (built, unbootable on this host)
 - On-device: `/data/adb/{modules/{playintegrityfix,rezygisk,susfs4ksu,tricky_store,Yurikey}, Box-Brain/{advanced,tricky_store/keybox.xml,target.txt,tee_status.txt,security_patch.txt}}`
 - Host: `module/custom.pif.prop` (canonical toggle combo)
 
