@@ -18,10 +18,11 @@ echo no | "$AVDMANAGER" create avd \
   --device "pixel_6" \
   --force
 
-# avdmanager may write the AVD under $ANDROID_AVD_HOME, ~/.android/avd, or
-# $ANDROID_HOME/.android/avd depending on version. Resolve the real location.
+# avdmanager may write the AVD under $ANDROID_AVD_HOME, ~/.android/avd,
+# $ANDROID_HOME/.android/avd, or (XDG layout) ~/.config/.android/avd
+# depending on version. Resolve the real location.
 AVD_DIR=""
-for base in "${ANDROID_AVD_HOME:-}" "$HOME/.android/avd" "$AH/.android/avd"; do
+for base in "${ANDROID_AVD_HOME:-}" "$HOME/.android/avd" "$AH/.android/avd" "$HOME/.config/.android/avd"; do
   [ -n "$base" ] && [ -d "$base/$AVD.avd" ] && AVD_DIR="$base/$AVD.avd" && break
 done
 [ -n "$AVD_DIR" ] || { echo "FAIL: AVD dir for '$AVD' not found after create" >&2; exit 1; }
