@@ -5,7 +5,14 @@ set -euo pipefail
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
 AVD="${AVD:-a36}"
 
-echo no | "$AH/cmdline-tools/tools/bin/avdmanager" create avd \
+# avdmanager lives under cmdline-tools/latest/bin in modern SDKs, tools/bin in older ones.
+AVDMANAGER=""
+for d in "$AH/cmdline-tools/latest/bin" "$AH/cmdline-tools/tools/bin"; do
+  [ -x "$d/avdmanager" ] && AVDMANAGER="$d/avdmanager" && break
+done
+[ -n "$AVDMANAGER" ] || { echo "FAIL: avdmanager not found under \$ANDROID_HOME/cmdline-tools" >&2; exit 1; }
+
+echo no | "$AVDMANAGER" create avd \
   --name "$AVD" \
   --package "system-images;android-36;google_apis_playstore;x86_64" \
   --device "pixel_6" \
