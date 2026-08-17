@@ -48,6 +48,7 @@ jobs:
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
           bash scripts/01-create-avd.sh || {
             echo "=== locating AVD dirs ==="
@@ -61,6 +62,7 @@ jobs:
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
+          export ANDROID_AVD_HOME="$HOME/.android/avd"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
           GPU=swiftshader_indirect EMU_LOG=/tmp/emulator.log bash scripts/02-boot-emulator.sh
 

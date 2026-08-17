@@ -47,6 +47,12 @@ setsid nohup "$EMU" -avd "$AVD" -no-window -no-audio -no-snapshot \
     truncate -s 52428800 "$LOG_FILE" 2>/dev/null || break; sleep 300
   done ) &
 
+# Wait for the emulator to register with adb, but fail fast if it never
+# appears (e.g. the AVD is missing) instead of hanging the job.
+for i in $(seq 1 60); do
+  "$ADB" devices | grep -q "emulator-5554" && break
+  sleep 2
+done
 "$ADB" wait-for-device
 for i in $(seq 1 120); do
   BC=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')
