@@ -30,12 +30,17 @@ fi
 
 echo "==> Tapping Make Play Integrity Request"
 "$ADB" shell input tap 574 900
-sleep 18
 
-UI=$(dump)
+# The verdict can take 30-60s in CI; poll until it renders.
+VERDICT=""
+for i in $(seq 1 30); do
+  sleep 5
+  UI=$(dump)
+  VERDICT=$(echo "$UI" | grep -oE 'MEETS_[A-Z_]+|NO_INTEGRITY|UNEVALUATED' | head -1)
+  [ -n "$VERDICT" ] && break
+done
+
 echo "$UI" | grep -oE 'text="[^"]*"' | sed 's/text="//;s/"$//' | grep -v '^$' | head -30
-
-VERDICT=$(echo "$UI" | grep -oE 'MEETS_[A-Z_]+|NO_INTEGRITY|UNEVALUATED' | head -1)
 echo
 echo "Verdict: ${VERDICT:-UNKNOWN}"
 
