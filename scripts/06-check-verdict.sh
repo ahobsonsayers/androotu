@@ -35,8 +35,8 @@ echo "==> Tapping Make Play Integrity Request"
 VERDICT=""
 for i in $(seq 1 30); do
   sleep 5
-  UI=$(dump)
-  VERDICT=$(echo "$UI" | grep -oE 'MEETS_[A-Z_]+|NO_INTEGRITY|UNEVALUATED' | head -1)
+  UI=$(dump) || true
+  VERDICT=$(echo "$UI" | grep -oE 'MEETS_[A-Z_]+|NO_INTEGRITY|UNEVALUATED' | head -1) || true
   [ -n "$VERDICT" ] && break
 done
 
