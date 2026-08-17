@@ -58,7 +58,7 @@ if ! "$ADB" devices | grep -q "emulator-5554"; then
   exit 1
 fi
 for i in $(seq 1 120); do
-  BC=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')
+  BC=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n' || true)
   [ "$BC" = "1" ] && { echo "Boot complete ($i polls)."; break; }
   sleep 3
 done
