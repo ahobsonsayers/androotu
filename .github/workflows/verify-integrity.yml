@@ -49,7 +49,13 @@ jobs:
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-          bash scripts/01-create-avd.sh
+          bash scripts/01-create-avd.sh || {
+            echo "=== locating AVD dirs ==="
+            find "$HOME" "$ANDROID_HOME" -maxdepth 5 -name "a36.avd" -o -name "a36.ini" 2>/dev/null
+            echo "=== ANDROID_AVD_HOME=$ANDROID_AVD_HOME ==="
+            ls -la "$HOME/.android/avd" 2>/dev/null || echo "no ~/.android/avd"
+            exit 1
+          }
 
       - name: Boot emulator
         run: |
