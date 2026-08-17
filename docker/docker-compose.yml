@@ -1,0 +1,30 @@
+---
+services:
+  a36-integrity:
+    container_name: a36-integrity
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "5555:5555"
+    volumes:
+      - ./data:/data
+    privileged: true
+    devices:
+      - /dev/kvm
+
+  scrcpy-web:
+    container_name: scrcpy-web
+    restart: unless-stopped
+    image: shmayro/scrcpy-web:latest
+    privileged: true
+    ports:
+      - "8000:8000"
+    depends_on:
+      a36-integrity:
+        condition: service_healthy
+    command: >
+      sh -c "
+        adb connect a36-integrity:5555 &&
+        npm start
+      "

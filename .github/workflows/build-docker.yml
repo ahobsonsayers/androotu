@@ -1,0 +1,94 @@
+name: build-docker
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [build-kernel]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push emulator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Smoke test: boot the built image with KVM and confirm the kernel + modules
+  # are correct, so we know the kernel is right for the image.
+  smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable KVM
+        run: |
+          ls -la /dev/kvm || sudo apt-get update && sudo apt-get install -y --no-install-recommends cpu-checker
+          sudo chmod 666 /dev/kvm
+
+      - name: Run container
+        run: |
+          docker run -d --name a36-smoke \
+            --device /dev/kvm --privileged \
+            -v "$PWD/data:/data" \
+            ghcr.io/${{ github.repository }}:latest
+
+      - name: Wait for first-boot
+        run: |
+          for i in $(seq 1 60); do
+            if docker logs a36-smoke 2>&1 | grep -q "Success !!"; then
+              echo "FIRST-BOOT DONE"; break
+            fi
+            if ! docker ps --format '{{.Names}}' | grep -q a36-smoke; then
+              echo "CONTAINER DIED"; docker logs a36-smoke; exit 1
+            fi
+            sleep 20
+          done
+          docker logs a36-smoke 2>&1 | grep -q "Success !!" || { echo "first-boot did not complete"; docker logs a36-smoke; exit 1; }
+
+      - name: Verify kernel + modules
+        run: |
+          ADB="docker exec a36-smoke /opt/android-sdk/platform-tools/adb"
+          $ADB wait-for-device
+          for i in $(seq 1 30); do
+            B=$($ADB shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')
+            [ "$B" = "1" ] && break
+            sleep 5
+          done
+          echo "=== kernel version ==="
+          $ADB shell su -c 'uname -r'
+          echo "=== modules ==="
+          $ADB shell su -c 'ls /data/adb/modules'
+          $ADB shell su -c 'ls /data/adb/modules' | grep -q playintegrityfix || { echo "playintegrityfix missing"; exit 1; }
+          $ADB shell su -c 'ls /data/adb/modules' | grep -q tricky_store || { echo "tricky_store missing"; exit 1; }
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f a36-smoke

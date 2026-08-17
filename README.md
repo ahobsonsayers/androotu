@@ -4,7 +4,7 @@
 
 [![Verdict](https://img.shields.io/badge/Play_Integrity-MEETS__DEVICE__INTEGRITY-3fd07f?style=flat-square)](docs/LEARNINGS.md)
 [![Device](https://img.shields.io/badge/device-Pixel_8_·_android--36_·_x86__64-4f8cff?style=flat-square)](module/custom.pif.prop)
-[![Kernel](https://img.shields.io/badge/kernel-custom_6.6_·_KSU--Next_+_SUSFS-7c5cff?style=flat-square)](kernel-build/)
+[![Kernel](https://img.shields.io/badge/kernel-custom_6.6_·_KSU--Next_+_SUSFS-7c5cff?style=flat-square)](kernel/)
 [![Type](https://img.shields.io/badge/contents-source_+_scripts_only-6b7689?style=flat-square)](#scope)
 
 ---
@@ -25,21 +25,46 @@ TEESimulator forges the hardware attestation chain from that keybox.
 
 | Path | What |
 |---|---|
-| [`scripts/`](scripts/) | `01-create-avd.sh` (AVD from the A36 Play Store image), `02-boot-emulator.sh` (cold-boot with the custom kernel), `03-install-modules.sh` (Integrity Box + TEESimulator + ReZygisk + SUSFS + manager + WebUI), `04-configure.sh` (Supreme profile + toggle combo), `05-verify-integrity.sh` (read-only health check, incl. the GENERATE-vs-PATCH mode check). |
+| [`scripts/`](scripts/) | `00-download-kernel.sh` (fetch the prebuilt kernel from the rolling release), `01-create-avd.sh` (AVD from the A36 Play Store image), `02-boot-emulator.sh` (cold-boot with the custom kernel), `03-install-modules.sh` (Integrity Box + TEESimulator + ReZygisk + SUSFS + manager + WebUI), `04-configure.sh` (Supreme profile + toggle combo), `05-verify-integrity.sh` (read-only health check, incl. the GENERATE-vs-PATCH mode check). |
 | [`module/custom.pif.prop`](module/custom.pif.prop) | The single source of truth for the spoofed device identity — Pixel 8 (`shiba`) CANARY profile + the toggle combo that passes. |
-| [`kernel-build/`](kernel-build/) | Docker + scripts that build AOSP `common-android15-6.6` with KSU-Next, SUSFS, module-vermagic bypass, and AVD anti-detection tweaks. Output: `out/bzImage-a36-btf`. |
+| [`kernel/`](kernel/) | Docker + scripts that build AOSP `common-android15-6.6` with KSU-Next, SUSFS, module-vermagic bypass, and AVD anti-detection tweaks. Output: `out/bzImage-a36-btf`. |
+| [`docker/`](docker/) | A self-contained Docker image (multi-stage: compiles the kernel, bakes it in) that runs the same rooted AVD in a container, published to GHCR. |
 | [`Taskfile.yml`](Taskfile.yml) | Thin wrapper over `scripts/` (`task install` → `task run` → `task verify`). |
 | [`docs/LEARNINGS.md`](docs/LEARNINGS.md) | The full journey and every pitfall. |
 
 ## Quick start
 
-```bash
-# 0. One-time prerequisites (see "Building the kernel"):
-#    ANDROID_HOME with system-images;android-36;google_apis_playstore;x86_64
-#    + a prebuilt kernel at kernel-build/out/bzImage-a36-btf
+There are **two ways to run** this — a native AVD on your host, or a Docker
+image. Both use the same custom kernel and module stack; neither requires
+building the kernel yourself.
 
-task install          # create the a36 AVD
-task run              # create → boot → install modules → configure → verify
+### Option A — Docker image (recommended, self-contained)
+
+The image compiles the kernel and bakes it in, so there's nothing to build:
+
+```bash
+docker pull ghcr.io/ahobsonsayers/androotu:latest
+docker run -d --name a36-integrity \
+  --device /dev/kvm --privileged \
+  -p 5555:5555 \
+  -v "$PWD/data:/data" \
+  ghcr.io/ahobsonsayers/androotu:latest
+```
+
+First boot provisions the AVD (~10-20 min; watch `docker logs -f a36-integrity`
+for `Success !!`). See [`docker/README.md`](docker/README.md) for the full
+build/run/use guide.
+
+### Option B — Native AVD on your host
+
+```bash
+# 0. One-time prerequisites:
+#    ANDROID_HOME with system-images;android-36;google_apis_playstore;x86_64
+#    + a prebuilt kernel at kernel/out/bzImage-a36-btf
+
+scripts/00-download-kernel.sh   # fetch the prebuilt kernel from the rolling release
+task install                    # create the a36 AVD
+task run                        # create → boot → install modules → configure → verify
 ```
 
 Full walkthrough: the five numbered steps under [Taskfile](#taskfile).
@@ -85,7 +110,8 @@ root), Google grants **DEVICE** but refuses **STRONG**.
 - ❌ **No `MEETS_STRONG_INTEGRITY`** — requires a keybox rooted in Google's
   genuine hardware attestation root (real device TEE or genuine leak), i.e. an
   arm64 host (Apple Silicon) or a physical Pixel.
-- ❌ **No prebuilt binaries / device images** — source + scripts only.
+- ✅ **Prebuilt kernel + Docker image published** to GitHub (rolling release +
+  GHCR) — no one builds the kernel themselves.
 
 ## Validated configuration
 
@@ -119,20 +145,25 @@ leak), which means an arm64 host (Apple Silicon) or a physical Pixel. See
 | `task run` | the full chain above |
 | `task clean` | remove the `a36` AVD (keeps SDK + kernel) |
 
-## Building the kernel (one-time)
+## Building the kernel (optional)
 
 The custom kernel adds KernelSU-Next (kernel-level root + ksud) and SUSFS
-(hiding), plus AVD anti-detection tweaks:
+(hiding), plus AVD anti-detection tweaks. **You usually don't need to build it** —
+the prebuilt kernel is published to the `kernel-latest` rolling GitHub release
+and fetched by `scripts/00-download-kernel.sh` (or baked into the Docker image).
+
+To build it yourself:
 
 ```sh
-cd kernel-build
+cd kernel
 ./scripts/build-all.sh    # fetch sources → apply patches → build
 ```
 
-Output: `kernel-build/out/bzImage-a36-btf` (also `out/bzImage`), plus modules
-in `kernel-build/out/modules/`. Requires a Linux x86_64 host with clang-18+,
+Output: `kernel/out/bzImage-a36-btf` (also `out/bzImage`), plus modules
+in `kernel/out/modules/`. Requires a Linux x86_64 host with clang-18+,
 lld, llvm, `dwarves` (pahole) and ~8 GB RAM for the link step. The included
-`kernel-build/Dockerfile` provides the full toolchain.
+`kernel/Dockerfile` provides the full toolchain and is published to GHCR as
+`ghcr.io/ahobsonsayers/androotu-kernel`.
 
 ## Credits
 

@@ -1,0 +1,31 @@
+# Build context is the repo root; the Dockerfile only needs the kernel bzImage
+# and module/custom.pif.prop. Excluding everything else keeps the context tiny
+# (repo is ~1.1G, mostly kernel sources) and avoids shipping docker/data back
+# into the daemon.
+
+.git
+.gitignore
+docs
+scripts
+docker/data
+docker/README.md
+docker/docker-compose.yml
+*.md
+
+# Kernel tree — sources are cloned inside the build; only the build scripts are
+# COPYed (multi-stage kernel-builder stage).
+kernel/sources
+kernel/.ccache
+kernel/out/modules
+kernel/out/modules-a36
+kernel/out/modules-ksunext
+kernel/out/ramdisk-nomagisk.img
+kernel/out/ksu_susfs_x86_64
+kernel/out/*.log
+kernel/*.log
+kernel/build.log
+kernel/*.Dockerfile
+
+# Generated VM images never belong in the build context.
+*.img
+*.qcow2
