@@ -34,7 +34,12 @@ echo "OK  abi=$PROP"
 PROVIDER=$(suroot 'grep "^spoofProvider=" /data/adb/modules/playintegrityfix/custom.pif.prop' | tr -d '\r\n')
 echo "OK  $PROVIDER"
 
-GEN=$(suroot "logcat -d | grep -c \"Generating new attested key pair for alias:\"" | tr -d '\r\n') || true
+GEN=0
+for i in $(seq 1 20); do
+  GEN=$(suroot "logcat -d | grep -c \"Generating new attested key pair for alias:\"" | tr -d '\r\n') || true
+  [ "${GEN:-0}" -gt 0 ] 2>/dev/null && break
+  sleep 3
+done
 PATCH=$(suroot "logcat -d | grep -c \"patched certificate chain for KeyIdentifier(uid=10146\"" | tr -d '\r\n') || true
 if [ "${GEN:-0}" -gt 0 ] 2>/dev/null; then
   echo "OK  TEESimulator GENERATE mode (fresh chain per request)"
