@@ -3,7 +3,7 @@ name: verify-integrity
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: [build-kernel]
+    workflows: [build-docker]
     types: [completed]
     branches: [main]
 

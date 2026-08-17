@@ -2,10 +2,12 @@ name: build-docker
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows: [build-kernel]
-    types: [completed]
+  push:
     branches: [main]
+    paths:
+      - 'docker/**'
+      - 'kernel/**'
+      - '.dockerignore'
 
 jobs:
   build:
