@@ -18,7 +18,15 @@ echo no | "$AVDMANAGER" create avd \
   --device "pixel_6" \
   --force
 
-CONFIG="$HOME/.android/avd/$AVD.avd/config.ini"
+# avdmanager may write the AVD under $ANDROID_AVD_HOME, ~/.android/avd, or
+# $ANDROID_HOME/.android/avd depending on version. Resolve the real location.
+AVD_DIR=""
+for base in "${ANDROID_AVD_HOME:-}" "$HOME/.android/avd" "$AH/.android/avd"; do
+  [ -n "$base" ] && [ -d "$base/$AVD.avd" ] && AVD_DIR="$base/$AVD.avd" && break
+done
+[ -n "$AVD_DIR" ] || { echo "FAIL: AVD dir for '$AVD' not found after create" >&2; exit 1; }
+
+CONFIG="$AVD_DIR/config.ini"
 python3 - "$CONFIG" << 'PY'
 import sys, os
 path = sys.argv[1]
