@@ -27,6 +27,19 @@ for base in "${ANDROID_AVD_HOME:-}" "$HOME/.android/avd" "$AH/.android/avd" "$HO
 done
 [ -n "$AVD_DIR" ] || { echo "FAIL: AVD dir for '$AVD' not found after create" >&2; exit 1; }
 
+# The emulator only searches $ANDROID_AVD_HOME, $ANDROID_SDK_HOME/avd and
+# $HOME/.android/avd. If avdmanager wrote the AVD somewhere else (e.g. the
+# XDG layout), relocate it into the canonical location so the emulator finds it.
+TARGET="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
+if [ "$AVD_DIR" != "$TARGET/$AVD.avd" ]; then
+  mkdir -p "$TARGET"
+  rm -rf "$TARGET/$AVD.avd"
+  mv "$AVD_DIR" "$TARGET/$AVD.avd"
+  AVD_DIR="$TARGET/$AVD.avd"
+  printf 'avd.ini.encoding=UTF-8\npath=%s\npath.rel=avd/%s.avd\ntarget=android-36\n' \
+    "$AVD_DIR" "$AVD" > "$TARGET/$AVD.ini"
+fi
+
 CONFIG="$AVD_DIR/config.ini"
 python3 - "$CONFIG" << 'PY'
 import sys, os
