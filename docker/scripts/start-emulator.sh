@@ -4,29 +4,7 @@
 set -euo pipefail
 
 AH="${ANDROID_HOME:-/opt/android-sdk}"
-EMU="$AH/emulator/emulator"
 AVD="${AVD:-a36}"
-API="${API:-36}"
-
-# first-boot.sh creates the AVD; wait for it before launching the emulator.
-for _ in $(seq 1 60); do
-  [ -f "/data/$AVD.ini" ] && break
-  sleep 2
-done
-if [ ! -f "/data/$AVD.ini" ]; then
-  echo "ERROR: AVD $AVD not created after 120s" >&2
-  exit 1
-fi
-
-pkill -f "$EMU" 2>/dev/null || true
-rm -f "/data/$AVD.avd"/*.lock 2>/dev/null || true
-
-KERNEL="${KERNEL:-/opt/kernel/bzImage-a36-btf}"
-if [[ ! -f "$KERNEL" ]]; then
-  echo "ERROR: kernel not found at $KERNEL" >&2
-  exit 1
-fi
-RAMDISK_FILE="$AH/system-images/android-$API/google_apis_playstore/x86_64/ramdisk.img"
 
 # Forward the emulator's localhost ADB to eth0 so other containers (scrcpy-web)
 # and the host can reach it on :5555.
@@ -35,11 +13,11 @@ if [ -n "$LOCAL_IP" ]; then
   socat tcp-listen:5555,bind="$LOCAL_IP",fork tcp:127.0.0.1:5555 &
 fi
 
-# Custom kernel is required for KSU/SUSFS root. Foreground so supervisor
-# restarts it on crash. Boot headless, no snapshot. -data pins the data
-# partition to a real file in /data (a volume), so user data persists across
-# container restarts when the volume is mounted and stays ephemeral otherwise.
-exec "$EMU" -avd "$AVD" -no-window -no-audio -no-snapshot \
-  -memory 1536 -no-boot-anim -no-metrics -gpu off -skip-adb-auth \
-  -data "/data/$AVD.avd/userdata-qemu.img" \
-  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE"
+export ANDROID_HOME="$AH"
+export ANDROID_AVD_HOME=/data
+export FOREGROUND=1
+export WAIT_FOR_INI=1
+export DATA_IMG="/data/$AVD.avd/userdata-qemu.img"
+export SKIP_ADB_AUTH=1
+export KERNEL="${KERNEL:-/opt/kernel/bzImage-a36-btf}"
+exec bash /root/scripts/02-boot-emulator.sh

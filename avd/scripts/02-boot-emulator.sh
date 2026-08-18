@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Boot the a36 emulator headless with the custom KSU/SUSFS kernel.
 # Use WIPE_DATA=1 for a clean first boot.
+# Docker: set FOREGROUND=1, DATA_IMG, SKIP_ADB_AUTH=1, WAIT_FOR_INI=1.
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
@@ -11,13 +12,27 @@ API="${API:-36}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_KERNEL="$ROOT/kernel/dist/bzImage-a36-btf"
 
+# Docker: first-boot.sh creates the AVD; wait for it before launching.
+if [ "${WAIT_FOR_INI:-0}" = "1" ]; then
+  for _ in $(seq 1 60); do
+    [ -f "/data/$AVD.ini" ] && break
+    sleep 2
+  done
+  [ -f "/data/$AVD.ini" ] || {
+    echo "ERROR: AVD $AVD not created after 120s" >&2
+    exit 1
+  }
+fi
+
 "$ADB" emu kill 2>/dev/null || true
 sleep 1
-AVD_DIR="$HOME/.android/avd/$AVD.avd"
+AVD_DIR="${ANDROID_AVD_HOME:-$HOME/.android/avd}/$AVD.avd"
 rm -f "$AVD_DIR"/*.lock 2>/dev/null || true
 
 EXTRA=()
 [ "${WIPE_DATA:-0}" = "1" ] && EXTRA=(-wipe-data)
+[ -n "${DATA_IMG:-}" ] && EXTRA+=(-data "$DATA_IMG")
+[ "${SKIP_ADB_AUTH:-0}" = "1" ] && EXTRA+=(-skip-adb-auth)
 
 KERNEL="${KERNEL:-$DEFAULT_KERNEL}"
 if [[ ! -f "$KERNEL" ]]; then
@@ -33,10 +48,17 @@ LOG_FILE="${EMU_LOG:-/tmp/emulator.log}"
 if [ -f "$LOG_FILE" ]; then
   mv -f "$LOG_FILE" "$LOG_FILE.old" 2>/dev/null || true
 fi
-setsid nohup "$EMU" -avd "$AVD" -no-window -no-audio -no-snapshot \
-  -memory 1536 -no-boot-anim -no-metrics -gpu "$GPU_MODE" "${EXTRA[@]}" \
-  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE" \
-  >"$LOG_FILE" 2>&1 </dev/null &
+
+ARGS=(-avd "$AVD" -no-window -no-audio -no-snapshot
+  -memory 1536 -no-boot-anim -no-metrics -gpu "$GPU_MODE" "${EXTRA[@]}"
+  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE")
+
+# Docker: run in the foreground so supervisor can manage/restart it.
+if [ "${FOREGROUND:-0}" = "1" ]; then
+  exec "$EMU" "${ARGS[@]}"
+fi
+
+setsid nohup "$EMU" "${ARGS[@]}" >"$LOG_FILE" 2>&1 </dev/null &
 (while [ -f "$LOG_FILE" ] && [ "$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 52428800 ]; do
   truncate -s 52428800 "$LOG_FILE" 2>/dev/null || break
   sleep 300
