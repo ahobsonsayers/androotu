@@ -96,7 +96,7 @@ Browser UI: open `http://localhost:8000`.
   `./data/a36.avd/userdata-qemu.img` via `-data`). To start clean, delete the
   volume and re-run (a fresh install auto-fetches a working keybox).
   **Persistence is optional:** mount `./data` as a volume (as in
-  `docker-compose.yml`) to keep user data across restarts, or omit the mount to
+  `compose.yml`) to keep user data across restarts, or omit the mount to
   run a stateless ephemeral emulator.
 - **Never restart `keymint`/`keystore2`/`TEESimulator`** after boot — it flips
   TEESimulator from GENERATE to PATCH mode and drops the verdict. Cold reboot

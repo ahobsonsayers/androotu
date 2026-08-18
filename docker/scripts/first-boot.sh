@@ -27,7 +27,10 @@ wait_boot() {
   "$ADB" wait-for-device || true
   for i in $(seq 1 120); do
     BC=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n' || true)
-    [ "$BC" = "1" ] && { echo "Boot complete ($i polls)."; return 0; }
+    [ "$BC" = "1" ] && {
+      echo "Boot complete ($i polls)."
+      return 0
+    }
     sleep 3
   done
   echo "FAIL: boot timeout" >&2
@@ -42,7 +45,7 @@ echo no | "$AH/cmdline-tools/latest/bin/avdmanager" create avd \
   --force
 
 CONFIG="/data/$AVD.avd/config.ini"
-python3 - "$CONFIG" << 'PY'
+python3 - "$CONFIG" <<'PY'
 import sys, os
 path = sys.argv[1]
 overrides = {
@@ -119,8 +122,11 @@ echo "==> Restarting GMS + Play Store so the spoof applies"
 suroot 'am force-stop com.google.android.gms.unstable; am force-stop com.android.vending'
 
 echo "==> Verifying stack"
-suroot 'ls /data/adb/modules/playintegrityfix' >/dev/null \
-  || { echo "FAIL: Integrity Box module missing" >&2; exit 1; }
+suroot 'ls /data/adb/modules/playintegrityfix' >/dev/null ||
+  {
+    echo "FAIL: Integrity Box module missing" >&2
+    exit 1
+  }
 GEN=$("$ADB" logcat -d 2>/dev/null | grep -c "Generating new attested key pair" || true)
 if [ "${GEN:-0}" -gt 0 ] 2>/dev/null; then
   echo "OK  TEESimulator GENERATE mode"

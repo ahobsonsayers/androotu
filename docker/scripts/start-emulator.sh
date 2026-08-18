@@ -4,13 +4,12 @@
 set -euo pipefail
 
 AH="${ANDROID_HOME:-/opt/android-sdk}"
-ADB="$AH/platform-tools/adb"
 EMU="$AH/emulator/emulator"
 AVD="${AVD:-a36}"
 API="${API:-36}"
 
 # first-boot.sh creates the AVD; wait for it before launching the emulator.
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
   [ -f "/data/$AVD.ini" ] && break
   sleep 2
 done
@@ -20,7 +19,7 @@ if [ ! -f "/data/$AVD.ini" ]; then
 fi
 
 pkill -f "$EMU" 2>/dev/null || true
-rm -f /data/$AVD.avd/*.lock 2>/dev/null || true
+rm -f "/data/$AVD.avd"/*.lock 2>/dev/null || true
 
 KERNEL="${KERNEL:-/opt/kernel/bzImage-a36-btf}"
 if [[ ! -f "$KERNEL" ]]; then
@@ -33,7 +32,7 @@ RAMDISK_FILE="$AH/system-images/android-$API/google_apis_playstore/x86_64/ramdis
 # and the host can reach it on :5555.
 LOCAL_IP=$(ip addr list eth0 2>/dev/null | grep "inet " | cut -d' ' -f6 | cut -d/ -f1)
 if [ -n "$LOCAL_IP" ]; then
-  socat tcp-listen:"5555",bind="$LOCAL_IP",fork tcp:127.0.0.1:"5555" &
+  socat tcp-listen:5555,bind="$LOCAL_IP",fork tcp:127.0.0.1:5555 &
 fi
 
 # Custom kernel is required for KSU/SUSFS root. Foreground so supervisor
