@@ -71,13 +71,13 @@ docker run -d --name androotu \
 
 The repo ships two working examples in [`extensions/`](extensions/):
 
-- `01-install-bindhosts-module.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`.
+- `01-install-bindhosts-module.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`, then reboots to activate it.
 - `02-install-adaway-app.sh` — installs the [AdAway](https://github.com/AdAway/AdAway) app (open-source ad blocker) via `adb install`.
 
 > [!NOTE]
 > `ksud module install` only stages a module — it activates on the **next boot**.
-> The bindhosts example therefore won't take effect until the emulator is
-> restarted. Apps installed via `adb install` are active immediately.
+> The bindhosts example reboots the emulator to activate it. Apps installed via
+> `adb install` are active immediately.
 
 Scripts run once per `/data` volume (first boot only). To re-run them, wipe the
 volume or remove `/data/.first-boot-done`.

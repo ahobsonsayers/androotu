@@ -13,3 +13,8 @@ curl -fsSL -o "$ZIP" "$URL"
 echo "Installing bindhosts module"
 "$ADB" push "$ZIP" /data/local/tmp/bindhosts.zip
 "$ADB" shell su -c 'ksud module install /data/local/tmp/bindhosts.zip'
+
+echo "Rebooting to activate the module"
+"$ADB" reboot
+"$ADB" wait-for-device
+"$ADB" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'
