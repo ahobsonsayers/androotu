@@ -6,6 +6,7 @@
 [![Device](https://img.shields.io/badge/device-Pixel_8_·_android--36_·_x86__64-4f8cff?style=flat-square)](avd/config/custom.pif.prop)
 [![Kernel](https://img.shields.io/badge/kernel-custom_6.6_·_KSU--Next_+_SUSFS-7c5cff?style=flat-square)](kernel/)
 [![Type](https://img.shields.io/badge/contents-source_+_scripts_only-6b7689?style=flat-square)](#scope)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
 
@@ -21,13 +22,25 @@ TEESimulator forges the hardware attestation chain from that keybox.
 > behavior on an emulator. `MEETS_DEVICE_INTEGRITY` is the realistic x86_64
 > ceiling — see [Why not STRONG](#why-not-strong).
 
+## Features
+
+- **Passes `MEETS_DEVICE_INTEGRITY`** on a rooted x86_64 AVD — custom kernel
+  (KernelSU-Next + SUSFS), Integrity Box profile/toggle spoofing, and
+  TEESimulator attestation forging.
+- **Two ways to run** — a self-contained Docker image (GHCR, nothing to build)
+  or a native AVD on your host. Both use the same kernel and module stack.
+- **No kernel build required** — the prebuilt KSU/SUSFS kernel is published to
+  a rolling GitHub release and fetched automatically.
+- **arm64 apps run** via the image's native-bridge translation
+  (`libndk_translation.so`), so most apps install and run on the x86_64 core.
+
 ## What's here
 
 | Path | What |
 |---|---|
-| [`avd/scripts/`](avd/scripts/) | `00-download-kernel.sh` (fetch the prebuilt kernel from the rolling release), `01-create-avd.sh` (AVD from the A36 Play Store image), `02-boot-emulator.sh` (cold-boot with the custom kernel), `03-install-modules.sh` (Integrity Box + TEESimulator + ReZygisk + SUSFS + manager + WebUI), `04-configure.sh` (Supreme profile + toggle combo), `05-verify-integrity.sh` (read-only health check, incl. the GENERATE-vs-PATCH mode check). |
+| [`avd/scripts/`](avd/scripts/) | `00-download-kernel.sh` (fetch the prebuilt kernel from the rolling release), `01-create-avd.sh` (AVD from the A36 Play Store image), `02-boot-emulator.sh` (cold-boot with the custom kernel), `03-install-modules.sh` (Integrity Box + TEESimulator + ReZygisk + SUSFS + manager + WebUI), `04-configure.sh` (Supreme profile + toggle combo), `05-verify-integrity.sh` (read-only health check, incl. the GENERATE-vs-PATCH mode check), `06-check-verdict.sh` (install SPIC, run a request, assert `MEETS_DEVICE_INTEGRITY`). |
 | [`avd/config/custom.pif.prop`](avd/config/custom.pif.prop) | The single source of truth for the spoofed device identity — Pixel 8 (`shiba`) CANARY profile + the toggle combo that passes. |
-| [`kernel/`](kernel/) | Docker + scripts that build AOSP `common-android15-6.6` with KSU-Next, SUSFS, module-vermagic bypass, and AVD anti-detection tweaks. Output: `out/bzImage-a36-btf`. |
+| [`kernel/`](kernel/) | Docker + build scripts that build AOSP `common-android15-6.6` with KSU-Next, SUSFS, module-vermagic bypass, and AVD anti-detection tweaks. Output: `dist/bzImage-a36-btf`. |
 | [`docker/`](docker/) | A self-contained Docker image (multi-stage: compiles the kernel, bakes it in) that runs the same rooted AVD in a container, published to GHCR. |
 | [`Taskfile.yml`](Taskfile.yml) | Thin wrapper over `avd/scripts/` (`task install` → `task run` → `task verify`). |
 | [`LEARNINGS.md`](LEARNINGS.md) | The full journey and every pitfall. |
@@ -139,7 +152,7 @@ task install                    # create the a36 AVD
 task run                        # create → boot → install modules → configure → verify
 ```
 
-Full walkthrough: the five numbered steps under [Taskfile](#taskfile).
+Full walkthrough: the tasks under [Taskfile](#taskfile).
 
 ## ⚠️ The traps that waste hours (read before debugging)
 
@@ -215,6 +228,7 @@ leak), which means an arm64 host (Apple Silicon) or a physical Pixel. See
 | `task configure` | `04-configure.sh` |
 | `task verify` | `05-verify-integrity.sh` |
 | `task run` | the full chain above |
+| `task lint` | shfmt + shellcheck + `bash -n` all scripts |
 | `task clean` | remove the `a36` AVD (keeps SDK + kernel) |
 
 ## Building the kernel (optional)
@@ -269,3 +283,21 @@ This project builds on several excellent open-source projects:
   AVD rooting approach (superseded here by KSU).
 - [remote-android/redroid](https://github.com/remote-android/redroid) —
   Android-in-Docker route evaluated but not chosen.
+
+## Contributing
+
+Contributions are welcome. This is a recipe repo — the most useful PRs fix a
+stale path, update a module version, or document a new pitfall in
+[`LEARNINGS.md`](LEARNINGS.md).
+
+Before opening a PR, run the linter:
+
+```sh
+task lint
+```
+
+It formats (`shfmt -i 2`), shellchecks, and syntax-checks every script.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
