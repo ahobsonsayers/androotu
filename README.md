@@ -8,6 +8,8 @@
 [![Type](https://img.shields.io/badge/contents-source_+_scripts_only-6b7689?style=flat-square)](#scope)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+[Features](#features) • [Quick start](#quick-start) • [The traps](#the-traps-that-waste-hours-read-before-debugging) • [The keybox](#the-keybox-read-this) • [Scope](#scope) • [Taskfile](#taskfile) • [Credits](#credits)
+
 ---
 
 A reproducible recipe for a **rooted Pixel-class Android emulator (AVD) that
@@ -18,7 +20,8 @@ real Pixel 8 (`shiba`) to Play Services. It combines a custom kernel
 drive the PIF profile and whose installer auto-fetches the attestation keybox —
 TEESimulator forges the hardware attestation chain from that keybox.
 
-> **This is a development/testing tool** for reproducing device-integrity
+> [!WARNING]
+> This is a **development/testing tool** for reproducing device-integrity
 > behavior on an emulator. `MEETS_DEVICE_INTEGRITY` is the realistic x86_64
 > ceiling — see [Why not STRONG](#why-not-strong).
 
@@ -63,7 +66,8 @@ build. It runs two containers mirroring
   volume.
 - **`scrcpy-web`** — browser control of the emulator at `:8000`.
 
-> **Credits:** This project is built on the architecture, Dockerfile layout, and
+> [!NOTE]
+> This project is built on the architecture, Dockerfile layout, and
 > first-boot provisioning model of
 > [Shmayro/dockerify-android](https://github.com/Shmayro/dockerify-android)
 > (supervisord programs, socat ADB forwarding, `/data` volume, first-boot
