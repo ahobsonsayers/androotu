@@ -65,16 +65,14 @@ docker run -d --name androotu \
   --privileged \
   -p 5555:5555 \
   -v "$PWD/data:/data" \
-  -v "$PWD/my-scripts:/opt/scripts" \
+  -v "$PWD/extensions:/opt/scripts" \
   ghcr.io/ahobsonsayers/androotu:latest
 ```
 
-For example, `my-scripts/01-install-app.sh`:
+The repo ships two working examples in [`extensions/`](extensions/):
 
-```bash
-#!/usr/bin/env bash
-adb install /opt/scripts/my-app.apk
-```
+- `01-install-bindhosts.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`.
+- `02-install-adaway.sh` — installs the [AdAway](https://github.com/AdAway/AdAway) app (open-source ad blocker) via `adb install`.
 
 Scripts run once per `/data` volume (first boot only). To re-run them, wipe the
 volume or remove `/data/.first-boot-done`.
