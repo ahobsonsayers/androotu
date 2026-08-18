@@ -104,11 +104,12 @@ RUN curl -fsSL -o /opt/modules/teesimulator.zip "$TEE_URL" && \
 # Bake in the canonical PIF profile (Supreme toggle combo).
 COPY avd/config/custom.pif.prop /opt/modules/custom.pif.prop
 
-# Supervisor + boot scripts.
+# Supervisor + boot scripts. first-boot.sh orchestrates the shared avd/scripts.
 COPY docker/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/scripts/start-emulator.sh /root/start-emulator.sh
 COPY docker/scripts/first-boot.sh /root/first-boot.sh
-RUN chmod +x /root/start-emulator.sh /root/first-boot.sh
+COPY avd/scripts /root/scripts
+RUN chmod +x /root/start-emulator.sh /root/first-boot.sh /root/scripts/*.sh
 
 EXPOSE 5554 5555
 

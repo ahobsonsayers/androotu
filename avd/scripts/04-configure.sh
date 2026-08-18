@@ -27,7 +27,8 @@ suroot 'command -v ksud >/dev/null' ||
   }
 
 echo "Enabling Supreme profile"
-"$ADB" push "$(dirname "${BASH_SOURCE[0]}")/../config/custom.pif.prop" /data/local/tmp/custom.pif.prop
+PIF_SRC="${PIF_SRC:-$(dirname "${BASH_SOURCE[0]}")/../config/custom.pif.prop}"
+"$ADB" push "$PIF_SRC" /data/local/tmp/custom.pif.prop
 suroot "cp /data/local/tmp/custom.pif.prop $PIF && chmod 0644 $PIF"
 
 echo "Writing canonical custom.pif.prop"
