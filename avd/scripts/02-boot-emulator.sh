@@ -51,7 +51,8 @@ fi
 
 ARGS=(-avd "$AVD" -no-window -no-audio -no-snapshot
   -memory 1536 -no-boot-anim -no-metrics -gpu "$GPU_MODE" "${EXTRA[@]}"
-  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE")
+  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE"
+  -feature -ModemSimulator)
 
 # Docker: run in the foreground so supervisor can manage/restart it.
 if [ "${FOREGROUND:-0}" = "1" ]; then
