@@ -10,7 +10,10 @@ AVDMANAGER=""
 for d in "$AH/cmdline-tools/latest/bin" "$AH/cmdline-tools/tools/bin"; do
   [ -x "$d/avdmanager" ] && AVDMANAGER="$d/avdmanager" && break
 done
-[ -n "$AVDMANAGER" ] || { echo "FAIL: avdmanager not found under \$ANDROID_HOME/cmdline-tools" >&2; exit 1; }
+[ -n "$AVDMANAGER" ] || {
+  echo "FAIL: avdmanager not found under \$ANDROID_HOME/cmdline-tools" >&2
+  exit 1
+}
 
 echo no | "$AVDMANAGER" create avd \
   --name "$AVD" \
@@ -18,18 +21,18 @@ echo no | "$AVDMANAGER" create avd \
   --device "pixel_6" \
   --force
 
-# avdmanager may write the AVD under $ANDROID_AVD_HOME, ~/.android/avd,
-# $ANDROID_HOME/.android/avd, or (XDG layout) ~/.config/.android/avd
-# depending on version. Resolve the real location.
+# Resolve where avdmanager wrote the AVD — varies by SDK version/layout.
 AVD_DIR=""
 for base in "${ANDROID_AVD_HOME:-}" "$HOME/.android/avd" "$AH/.android/avd" "$HOME/.config/.android/avd"; do
   [ -n "$base" ] && [ -d "$base/$AVD.avd" ] && AVD_DIR="$base/$AVD.avd" && break
 done
-[ -n "$AVD_DIR" ] || { echo "FAIL: AVD dir for '$AVD' not found after create" >&2; exit 1; }
+[ -n "$AVD_DIR" ] || {
+  echo "FAIL: AVD dir for '$AVD' not found after create" >&2
+  exit 1
+}
 
 # The emulator only searches $ANDROID_AVD_HOME, $ANDROID_SDK_HOME/avd and
-# $HOME/.android/avd. If avdmanager wrote the AVD somewhere else (e.g. the
-# XDG layout), relocate it into the canonical location so the emulator finds it.
+# $HOME/.android/avd. If avdmanager wrote it elsewhere (XDG layout), relocate it.
 TARGET="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
 if [ "$AVD_DIR" != "$TARGET/$AVD.avd" ]; then
   mkdir -p "$TARGET"
@@ -37,11 +40,11 @@ if [ "$AVD_DIR" != "$TARGET/$AVD.avd" ]; then
   mv "$AVD_DIR" "$TARGET/$AVD.avd"
   AVD_DIR="$TARGET/$AVD.avd"
   printf 'avd.ini.encoding=UTF-8\npath=%s\npath.rel=avd/%s.avd\ntarget=android-36\n' \
-    "$AVD_DIR" "$AVD" > "$TARGET/$AVD.ini"
+    "$AVD_DIR" "$AVD" >"$TARGET/$AVD.ini"
 fi
 
 CONFIG="$AVD_DIR/config.ini"
-python3 - "$CONFIG" << 'PY'
+python3 - "$CONFIG" <<'PY'
 import sys, os
 path = sys.argv[1]
 overrides = {

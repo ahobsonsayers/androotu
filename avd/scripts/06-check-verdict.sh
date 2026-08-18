@@ -20,7 +20,10 @@ echo "==> Launching SPIC"
 sleep 10
 
 # Dismiss the "System UI isn't responding" ANR dialog if it appears.
-dump() { "$ADB" shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; "$ADB" shell cat /sdcard/ui.xml 2>/dev/null; }
+dump() {
+  "$ADB" shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+  "$ADB" shell cat /sdcard/ui.xml 2>/dev/null
+}
 
 if dump | grep -q "System UI isn't responding"; then
   echo "==> Dismissing ANR dialog"
@@ -33,7 +36,7 @@ echo "==> Tapping Make Play Integrity Request"
 
 # The verdict can take 30-60s in CI; poll until it renders.
 VERDICT=""
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
   sleep 5
   UI=$(dump) || true
   VERDICT=$(echo "$UI" | grep -oE 'MEETS_[A-Z_]+|NO_INTEGRITY|UNEVALUATED' | head -1) || true
@@ -45,12 +48,12 @@ echo
 echo "Verdict: ${VERDICT:-UNKNOWN}"
 
 case "$VERDICT" in
-  MEETS_DEVICE_INTEGRITY|MEETS_STRONG_INTEGRITY)
-    echo "PASS: $VERDICT"
-    exit 0
-    ;;
-  *)
-    echo "FAIL: expected MEETS_DEVICE_INTEGRITY, got ${VERDICT:-UNKNOWN}" >&2
-    exit 1
-    ;;
+MEETS_DEVICE_INTEGRITY | MEETS_STRONG_INTEGRITY)
+  echo "PASS: $VERDICT"
+  exit 0
+  ;;
+*)
+  echo "FAIL: expected MEETS_DEVICE_INTEGRITY, got ${VERDICT:-UNKNOWN}" >&2
+  exit 1
+  ;;
 esac

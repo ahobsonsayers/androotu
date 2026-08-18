@@ -12,7 +12,7 @@ tasks:
   install:
     desc: One-time setup — create the a36 AVD
     cmds:
-      - scripts/01-create-avd.sh
+      - avd/scripts/01-create-avd.sh
 
   # ─── Run (full integrity stack) ─────────────────────────────────────────
 
@@ -28,22 +28,31 @@ tasks:
   boot:
     desc: Boot the a36 emulator headless with the custom kernel
     cmds:
-      - scripts/02-boot-emulator.sh
+      - avd/scripts/02-boot-emulator.sh
 
   install:modules:
     desc: Install Integrity Box + WebUI/manager apps, then reboot
     cmds:
-      - scripts/03-install-modules.sh
+      - avd/scripts/03-install-modules.sh
 
   configure:
     desc: Configure Integrity Box (Supreme profile + toggles) and restart GMS
     cmds:
-      - scripts/04-configure.sh
+      - avd/scripts/04-configure.sh
 
   verify:
     desc: Check the stack + TEESimulator GENERATE mode
     cmds:
-      - scripts/05-verify-integrity.sh
+      - avd/scripts/05-verify-integrity.sh
+
+  # ─── Lint ────────────────────────────────────────────────────────────────
+
+  lint:
+    desc: Format (shfmt -i 2) and shellcheck all scripts
+    cmds:
+      - shfmt -i 2 -w avd/scripts/*.sh kernel/build/*.sh docker/scripts/*.sh
+      - shellcheck -x avd/scripts/*.sh kernel/build/*.sh docker/scripts/*.sh
+      - bash -n avd/scripts/*.sh kernel/build/*.sh docker/scripts/*.sh
 
   # ─── Cleanup ─────────────────────────────────────────────────────────────
 
