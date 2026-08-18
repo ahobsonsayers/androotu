@@ -7,16 +7,19 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates curl wget git xz-utils unzip \
-        build-essential bc bison flex \
-        libssl-dev openssl libelf-dev \
-        kmod cpio rsync \
+        bc bison build-essential \
+        ca-certificates clang cpio curl \
+        device-tree-compiler dwarves \
+        flex \
+        git \
+        kmod \
+        libelf-dev libssl-dev lld llvm llvm-dev lz4 \
+        openssl \
         python3 \
-        device-tree-compiler \
-        zstd lz4 \
-        dwarves \
-        ccache \
-        clang lld llvm llvm-dev \
+        rsync \
+        unzip \
+        wget xz-utils \
+        zstd \
     && rm -rf /var/lib/apt/lists/*
 
 RUN git config --global user.email "kbuild@local" \
@@ -38,18 +41,21 @@ FROM ubuntu:20.04
 # Base tooling (mirrors dockerify-android).
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        libegl1 \
-        openjdk-17-jdk-headless \
-        wget \
         curl \
         git \
-        unzip \
-        supervisor \
-        qemu-kvm \
         iproute2 \
+        libegl1 \
+        libx11-6 \
+        libx11-xcb1 \
+        libxext6 \
+        openjdk-17-jdk-headless \
+        python3 \
+        qemu-kvm \
         socat \
+        supervisor \
         tzdata \
-        python3 && \
+        unzip \
+        wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
