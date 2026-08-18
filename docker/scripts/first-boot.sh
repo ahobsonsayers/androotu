@@ -21,16 +21,7 @@ export PIF_SRC=/root/modules/custom.pif.prop
 
 wait_boot() {
   "$ADB" wait-for-device || true
-  for i in $(seq 1 120); do
-    BC=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n' || true)
-    [ "$BC" = "1" ] && {
-      echo "Boot complete ($i polls)."
-      return 0
-    }
-    sleep 3
-  done
-  echo "FAIL: boot timeout" >&2
-  exit 1
+  "$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
 }
 
 echo "Creating AVD $AVD"
