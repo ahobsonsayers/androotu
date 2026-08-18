@@ -27,22 +27,23 @@ Requires Docker with KVM passthrough (`/dev/kvm`). x86_64 host only.
 
 ```bash
 docker pull ghcr.io/ahobsonsayers/androotu:latest
-docker run -d --name a36-integrity \
-  --device /dev/kvm --privileged \
+docker run -d --name androotu \
+  --device /dev/kvm \
+  --privileged \
   -p 5555:5555 \
   -v "$PWD/data:/data" \
   ghcr.io/ahobsonsayers/androotu:latest
 ```
 
 First boot provisions the AVD (creates it, installs the module stack, configures
-the profile, verifies) — ~10-20 min. Watch it with `docker logs -f a36-integrity`;
+the profile, verifies) — ~10-20 min. Watch it with `docker logs -f androotu`;
 you'll know it's done when you see `Success !!`.
 
 The Play Store image forces `ro.adb.secure=1`, so external ADB clients must
 present the image's baked-in key:
 
 ```bash
-docker run --rm --entrypoint cat a36-integrity:latest /root/.android/adbkey > adbkey
+docker run --rm --entrypoint cat androotu:latest /root/.android/adbkey > adbkey
 ADB_VENDOR_KEYS=$PWD/adbkey adb connect localhost:5555
 ```
 

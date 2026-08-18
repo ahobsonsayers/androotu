@@ -113,7 +113,7 @@ fi
 
 # Our anti-emulator source customizations.
 echo "Customizing kernel source for AVD anti-detection"
-bash "${ROOT}/build/customize-kernel.sh" "${KERNEL_DIR}"
+bash "$(dirname "${BASH_SOURCE[0]}")/customize-kernel.sh" "${KERNEL_DIR}"
 
 touch "${KERNEL_DIR}/.avd-patches-applied"
 echo

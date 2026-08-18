@@ -8,7 +8,7 @@ ADB="$AH/platform-tools/adb"
 EMU="$AH/emulator/emulator"
 AVD="${AVD:-a36}"
 API="${API:-36}"
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEFAULT_KERNEL="$ROOT/kernel/dist/bzImage-a36-btf"
 
 "$ADB" emu kill 2>/dev/null || true
