@@ -19,17 +19,13 @@ export ANDROID_AVD_HOME=/data
 export MODULES_DIR=/root/modules
 export PIF_SRC=/root/modules/custom.pif.prop
 
-wait_boot() {
-  "$ADB" wait-for-device || true
-  "$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
-}
-
 echo "Creating AVD $AVD"
 bash "$SCRIPTS/01-create-avd.sh"
 
 # The emulator program (supervisor) boots this AVD. Wait for it to come up.
 echo "Waiting for emulator boot"
-wait_boot
+"$ADB" wait-for-device || true
+"$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
 
 echo "Installing modules"
 bash "$SCRIPTS/03-install-modules.sh"

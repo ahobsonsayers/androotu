@@ -17,4 +17,4 @@ echo "Installing bindhosts module"
 echo "Rebooting to activate the module"
 "$ADB" reboot
 "$ADB" wait-for-device
-"$ADB" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'
+"$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
