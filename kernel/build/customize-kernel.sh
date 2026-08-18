@@ -10,15 +10,15 @@ MARKER='AVD_SPOOF_INJECTED'
 # In android13-5.15, module procfs is in kernel/module.c (single file).
 # In android15-6.6, it's split into kernel/module/procfs.c.
 if [ -f kernel/module/procfs.c ]; then
-    f=kernel/module/procfs.c
+  f=kernel/module/procfs.c
 else
-    f=kernel/module.c
+  f=kernel/module.c
 fi
 if grep -q "${MARKER}" "$f"; then
-    echo "  - ${f}: already injected"
+  echo "  - ${f}: already injected"
 else
-    echo "  - ${f}: injecting /proc/modules blocklist"
-    python3 - "$f" <<'PY'
+  echo "  - ${f}: injecting /proc/modules blocklist"
+  python3 - "$f" <<'PY'
 import sys, re
 path = sys.argv[1]
 src = open(path).read()
@@ -68,10 +68,10 @@ fi
 # in the kernel as a defense-in-depth.
 f=arch/x86/kernel/cpu/proc.c
 if grep -q "${MARKER}" "$f"; then
-    echo "  - ${f}: already injected"
+  echo "  - ${f}: already injected"
 else
-    echo "  - ${f}: injecting model name spoof"
-    python3 - "$f" <<'PY'
+  echo "  - ${f}: injecting model name spoof"
+  python3 - "$f" <<'PY'
 import sys, re
 path = sys.argv[1]
 src = open(path).read()

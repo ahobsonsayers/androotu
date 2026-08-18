@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== 1/3 fetch sources ==="
-bash "${ROOT}/scripts/fetch-sources.sh"
+bash "${HERE}/fetch-sources.sh"
 
 echo "=== 2/3 apply patches ==="
-bash "${ROOT}/scripts/apply-patches.sh"
+bash "${HERE}/apply-patches.sh"
 
 echo "=== 3/3 build kernel ==="
-bash "${ROOT}/scripts/build.sh"
+bash "${HERE}/build.sh"
 
 echo
-echo "==> Done. Kernel image at: kernel/out/bzImage"
+echo "==> Done. Kernel image at: kernel/dist/bzImage"

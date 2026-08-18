@@ -39,10 +39,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          mkdir -p kernel/out
-          gh release download kernel-latest --pattern bzImage --dir kernel/out
-          mv kernel/out/bzImage kernel/out/bzImage-a36-btf
-          ls -la kernel/out/bzImage-a36-btf
+          mkdir -p kernel/dist
+          gh release download kernel-latest --pattern bzImage --dir kernel/dist
+          mv kernel/dist/bzImage kernel/dist/bzImage-a36-btf
+          ls -la kernel/dist/bzImage-a36-btf
 
       - name: Create AVD
         run: |
@@ -50,7 +50,7 @@ jobs:
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-          bash scripts/01-create-avd.sh || {
+          bash avd/scripts/01-create-avd.sh || {
             echo "=== locating AVD dirs ==="
             find "$HOME" "$ANDROID_HOME" -maxdepth 5 -name "a36.avd" -o -name "a36.ini" 2>/dev/null
             echo "=== ANDROID_AVD_HOME=$ANDROID_AVD_HOME ==="
@@ -64,35 +64,35 @@ jobs:
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export ANDROID_AVD_HOME="$HOME/.android/avd"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          GPU=swiftshader_indirect EMU_LOG=/tmp/emulator.log bash scripts/02-boot-emulator.sh
+          GPU=swiftshader_indirect EMU_LOG=/tmp/emulator.log bash avd/scripts/02-boot-emulator.sh
 
       - name: Install modules
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          bash scripts/03-install-modules.sh
+          bash avd/scripts/03-install-modules.sh
 
       - name: Configure
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          bash scripts/04-configure.sh
+          bash avd/scripts/04-configure.sh
 
       - name: Verify stack
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          bash scripts/05-verify-integrity.sh
+          bash avd/scripts/05-verify-integrity.sh
 
       - name: Check Play Integrity verdict
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          bash scripts/06-check-verdict.sh
+          bash avd/scripts/06-check-verdict.sh
 
       - name: Upload emulator log
         if: always()

@@ -32,11 +32,11 @@ ENV PATH="/usr/lib/ccache:${PATH}"
 WORKDIR /work
 
 # Copy the build scripts. build-all.sh computes ROOT as the parent of scripts/,
-# so /work/scripts -> ROOT=/work -> kernel written to /work/out/bzImage.
-COPY kernel/scripts /work/scripts
+# so /work/scripts -> ROOT=/work -> kernel written to /work/dist/bzImage.
+COPY kernel/build /work/scripts
 
 # Build the kernel. Sources are cloned inside the build (fetch-sources.sh).
 RUN bash /work/scripts/build-all.sh
 
 # Keep the kernel at a stable path for extraction / COPY --from.
-RUN mkdir -p /kernel && cp /work/out/bzImage /kernel/bzImage
+RUN mkdir -p /kernel && cp /work/dist/bzImage /kernel/bzImage

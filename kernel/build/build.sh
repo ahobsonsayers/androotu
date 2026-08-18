@@ -5,8 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 KERNEL_DIR="${ROOT}/sources/kernel"
 
 if [[ ! -f "${KERNEL_DIR}/.avd-patches-applied" ]]; then
-    echo "ERROR: patches not yet applied. Run scripts/apply-patches.sh first." >&2
-    exit 1
+  echo "ERROR: patches not yet applied. Run build/apply-patches.sh first." >&2
+  exit 1
 fi
 
 cd "${KERNEL_DIR}"
@@ -29,7 +29,7 @@ echo "==> defconfig"
 make -j "${JOBS}" gki_defconfig
 
 # Append config overrides: KSU + SUSFS features + LOCALVERSION
-cat >> .config <<'EOF'
+cat >>.config <<'EOF'
 CONFIG_KSU=y
 CONFIG_KSU_SUSFS=y
 CONFIG_KSU_SUSFS_SUS_PATH=y
@@ -75,20 +75,19 @@ time make -j "${JOBS}" bzImage modules
 
 echo
 echo "==> Build complete"
-ls -la arch/x86/boot/bzImage | sed 's|^|    |'
+stat -c '    %s bytes  %n' arch/x86/boot/bzImage
 
-OUTDIR="${ROOT}/out"
+OUTDIR="${ROOT}/dist"
 mkdir -p "${OUTDIR}"
 cp -fv arch/x86/boot/bzImage "${OUTDIR}/bzImage"
 echo
-echo "==> Kernel image copied to kernel/out/bzImage"
+echo "==> Kernel image copied to kernel/dist/bzImage"
 
-# Install modules to out/modules/
-echo "==> Installing modules to out/modules/"
+echo "==> Installing modules to dist/modules/"
 rm -rf "${OUTDIR}/modules"
 make -j "${JOBS}" INSTALL_MOD_PATH="${OUTDIR}/modules" modules_install
-echo "==> Modules installed to kernel/out/modules/"
+echo "==> Modules installed to kernel/dist/modules/"
 
 echo
 echo "Kernel build version banner:"
-( strings arch/x86/boot/bzImage || true ) | grep -m1 "Linux version" | sed 's|^|    |' || true
+(strings arch/x86/boot/bzImage || true) | grep -m1 "Linux version" | sed 's|^|    |' || true

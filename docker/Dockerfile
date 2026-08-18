@@ -28,9 +28,9 @@ ENV CCACHE_DIR=/work/.ccache
 ENV PATH="/usr/lib/ccache:${PATH}"
 
 WORKDIR /work
-COPY kernel/scripts /work/scripts
+COPY kernel/build /work/scripts
 RUN bash /work/scripts/build-all.sh
-RUN mkdir -p /kernel && cp /work/out/bzImage /kernel/bzImage
+RUN mkdir -p /kernel && cp /work/dist/bzImage /kernel/bzImage
 
 # Stage 2: the emulator runtime.
 FROM ubuntu:20.04
@@ -102,12 +102,12 @@ RUN curl -fsSL -o /opt/modules/teesimulator.zip "$TEE_URL" && \
     curl -fsSL -o /opt/modules/ksunext.apk "$KSU_NEXT_URL"
 
 # Bake in the canonical PIF profile (Supreme toggle combo).
-COPY module/custom.pif.prop /opt/modules/custom.pif.prop
+COPY avd/config/custom.pif.prop /opt/modules/custom.pif.prop
 
 # Supervisor + boot scripts.
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY docker/start-emulator.sh /root/start-emulator.sh
-COPY docker/first-boot.sh /root/first-boot.sh
+COPY docker/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/scripts/start-emulator.sh /root/start-emulator.sh
+COPY docker/scripts/first-boot.sh /root/first-boot.sh
 RUN chmod +x /root/start-emulator.sh /root/first-boot.sh
 
 EXPOSE 5554 5555
