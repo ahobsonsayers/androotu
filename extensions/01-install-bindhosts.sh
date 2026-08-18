@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Demo extension: install the bindhosts module (systemless hosts / ad blocking).
+# Install the bindhosts module (systemless hosts / ad blocking).
 # Runs on first boot after the stack is up, so adb + su are available.
 set -euo pipefail
 

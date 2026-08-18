@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Demo extension: install the AdAway app (open-source ad blocker).
+# Install the AdAway app (open-source ad blocker).
 # Runs on first boot after the stack is up, so adb is available.
 set -euo pipefail
 
