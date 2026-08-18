@@ -25,7 +25,7 @@ export STRIP=llvm-strip
 
 JOBS="${JOBS:-$(nproc)}"
 
-echo "==> defconfig"
+echo "defconfig"
 make -j "${JOBS}" gki_defconfig
 
 # Append config overrides: KSU + SUSFS features + LOCALVERSION
@@ -70,23 +70,23 @@ EOF
 ./scripts/config --enable CONFIG_VIRTIO_BALLOON
 
 make -j "${JOBS}" olddefconfig
-echo "==> Build (parallel jobs=${JOBS})"
+echo "Build (parallel jobs=${JOBS})"
 time make -j "${JOBS}" bzImage modules
 
 echo
-echo "==> Build complete"
+echo "Build complete"
 stat -c '    %s bytes  %n' arch/x86/boot/bzImage
 
 OUTDIR="${ROOT}/dist"
 mkdir -p "${OUTDIR}"
 cp -fv arch/x86/boot/bzImage "${OUTDIR}/bzImage"
 echo
-echo "==> Kernel image copied to kernel/dist/bzImage"
+echo "Kernel image copied to kernel/dist/bzImage"
 
-echo "==> Installing modules to dist/modules/"
+echo "Installing modules to dist/modules/"
 rm -rf "${OUTDIR}/modules"
 make -j "${JOBS}" INSTALL_MOD_PATH="${OUTDIR}/modules" modules_install
-echo "==> Modules installed to kernel/dist/modules/"
+echo "Modules installed to kernel/dist/modules/"
 
 echo
 echo "Kernel build version banner:"

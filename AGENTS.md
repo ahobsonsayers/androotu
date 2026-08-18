@@ -48,7 +48,7 @@ Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling
 ## Style
 
 - Scripts: `#!/usr/bin/env bash`, `set -euo pipefail`, chmod +x.
-- No comments unless asked. `ponytail:` comments mark intentional simplifications.
+- No comments unless asked.
 - Verify scripts: `bash -n avd/scripts/*.sh`.
 
 ## Git

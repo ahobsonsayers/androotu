@@ -16,7 +16,7 @@ KSU_WEBUI_URL="https://github.com/5ec1cff/KsuWebUIStandalone/releases/download/v
 # Manager MUST be v3.2.0 — matches the kernel's embedded ksud; v3.3.0 refuses to work.
 KSU_NEXT_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/KernelSU_Next_v3.2.0_33129-release.apk"
 
-echo "==> Downloading modules + WebUI + manager"
+echo "Downloading modules + WebUI + manager"
 curl -fsSL -o "$TMP/teesimulator.zip" "$TEE_URL"
 curl -fsSL -o "$TMP/rezygisk.zip" "$REZYGISK_URL"
 curl -fsSL -o "$TMP/susfs.zip" "$SUSFS_URL"
@@ -26,13 +26,13 @@ curl -fsSL -o "$TMP/ksunext.apk" "$KSU_NEXT_URL"
 
 # Fresh userdata has no /data/adb/ksud — the manager extracts it on first
 # launch. Bootstrap it BEFORE any su-based command.
-echo "==> Bootstrapping KSU manager (extracts ksud, enables su)"
+echo "Bootstrapping KSU manager (extracts ksud, enables su)"
 "$ADB" install -r "$TMP/ksunext.apk"
 "$ADB" shell am start -n com.rifsxd.ksunext/.ui.MainActivity
 sleep 10
 
 install_module() {
-  echo "==> Installing $1"
+  echo "Installing $1"
   "$ADB" push "$TMP/$2" /data/local/tmp/module.zip
   "$ADB" shell su -c 'ksud module install /data/local/tmp/module.zip'
 }
@@ -42,10 +42,10 @@ install_module "ReZygisk" rezygisk.zip
 install_module "SUSFS-for-KernelSU" susfs.zip
 install_module "Integrity Box" integrity-box.zip
 
-echo "==> Installing KsuWebUIStandalone"
+echo "Installing KsuWebUIStandalone"
 "$ADB" install -r "$TMP/ksuwebui.apk"
 
-echo "==> Rebooting to activate the modules"
+echo "Rebooting to activate the modules"
 "$ADB" reboot
 "$ADB" wait-for-device
 for i in $(seq 1 120); do

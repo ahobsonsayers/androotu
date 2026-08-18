@@ -12,7 +12,7 @@ REPO="${REPO:-ahobsonsayers/androotu}"
 TAG="${TAG:-kernel-latest}"
 DEST="${OUT}/bzImage-a36-btf"
 
-echo "==> Downloading kernel from ${REPO} release ${TAG}"
+echo "Downloading kernel from ${REPO} release ${TAG}"
 if command -v gh >/dev/null 2>&1; then
   gh release download "$TAG" --repo "$REPO" --pattern bzImage --dir "$OUT"
 else
@@ -31,5 +31,5 @@ fi
   echo "FAIL: kernel not found at $DEST" >&2
   exit 1
 }
-echo "==> Kernel ready at $DEST"
+echo "Kernel ready at $DEST"
 ls -la "$DEST"

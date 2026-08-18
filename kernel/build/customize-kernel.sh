@@ -88,4 +88,4 @@ open(path, 'w').write(src)
 PY
 fi
 
-echo "==> kernel customization complete"
+echo "kernel customization complete"

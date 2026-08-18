@@ -14,7 +14,7 @@ PIF="$MOD_DIR/custom.pif.prop"
 # Nested `su root -c` is reliable on fresh AVDs (plain su intermittently
 # rejects /data/adb). Commands here must not contain single quotes.
 suroot() {
-  local i
+  local _
   for i in 1 2 3 4 5; do
     if "$ADB" shell su -c "su root -c '$1'" 2>/dev/null; then return 0; fi
     sleep 3
@@ -37,7 +37,7 @@ wait_boot() {
   exit 1
 }
 
-echo "==> Creating AVD $AVD"
+echo "Creating AVD $AVD"
 echo no | "$AH/cmdline-tools/latest/bin/avdmanager" create avd \
   --name "$AVD" \
   --package "system-images;android-$API;google_apis_playstore;x86_64" \
@@ -85,16 +85,16 @@ open(path, 'w').write("\n".join(out) + "\n")
 PY
 
 # The emulator program (supervisor) boots this AVD. Wait for it to come up.
-echo "==> Waiting for emulator boot"
+echo "Waiting for emulator boot"
 wait_boot
 
-echo "==> Bootstrapping KSU manager (extracts ksud, enables su)"
+echo "Bootstrapping KSU manager (extracts ksud, enables su)"
 "$ADB" install -r /opt/modules/ksunext.apk
 "$ADB" shell am start -n com.rifsxd.ksunext/.ui.MainActivity
 sleep 10
 
 install_module() {
-  echo "==> Installing $1"
+  echo "Installing $1"
   "$ADB" push "/opt/modules/$2" /data/local/tmp/module.zip
   "$ADB" shell su -c 'ksud module install /data/local/tmp/module.zip'
 }
@@ -104,24 +104,24 @@ install_module "ReZygisk" rezygisk.zip
 install_module "SUSFS-for-KernelSU" susfs.zip
 install_module "Integrity Box" integrity-box.zip
 
-echo "==> Installing KsuWebUIStandalone"
+echo "Installing KsuWebUIStandalone"
 "$ADB" install -r /opt/modules/ksuwebui.apk
 
-echo "==> Rebooting to activate the modules"
+echo "Rebooting to activate the modules"
 "$ADB" reboot
 wait_boot
 
-echo "==> Enabling Supreme profile"
+echo "Enabling Supreme profile"
 "$ADB" push /opt/modules/custom.pif.prop /data/local/tmp/custom.pif.prop
 suroot "cp /data/local/tmp/custom.pif.prop $PIF && chmod 0644 $PIF"
 
-echo "==> Writing canonical custom.pif.prop"
+echo "Writing canonical custom.pif.prop"
 suroot "rm -f $BOX_DIR/pixelify $BOX_DIR/legacy $BOX_DIR/wipe && touch $BOX_DIR/advanced && chmod 0644 $BOX_DIR/advanced"
 
-echo "==> Restarting GMS + Play Store so the spoof applies"
+echo "Restarting GMS + Play Store so the spoof applies"
 suroot 'am force-stop com.google.android.gms.unstable; am force-stop com.android.vending'
 
-echo "==> Verifying stack"
+echo "Verifying stack"
 suroot 'ls /data/adb/modules/playintegrityfix' >/dev/null ||
   {
     echo "FAIL: Integrity Box module missing" >&2

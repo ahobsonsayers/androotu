@@ -9,11 +9,11 @@ SUSFS_DIR="${ROOT}/sources/susfs"
 WILD_DIR="${ROOT}/sources/wild-patches"
 
 if [[ ! -d "${KERNEL_DIR}" ]]; then
-  echo "ERROR: ${KERNEL_DIR} not found. Run scripts/fetch-sources.sh first." >&2
+  echo "ERROR: ${KERNEL_DIR} not found. Run build/fetch-sources.sh first." >&2
   exit 1
 fi
 
-echo "==> Resetting kernel tree to clean state"
+echo "Resetting kernel tree to clean state"
 (cd "${KERNEL_DIR}" &&
   git reset --hard HEAD >/dev/null &&
   git clean -fdx >/dev/null)
@@ -22,7 +22,7 @@ cd "${KERNEL_DIR}"
 
 # KernelSU-Next. Pre-copy our clone so setup.sh doesn't re-clone over network.
 KSU_COMMIT="5a4a71874caaad06aa126f761c93391de1d32361"
-echo "==> Integrating KernelSU-Next @ ${KSU_COMMIT:0:12}"
+echo "Integrating KernelSU-Next @ ${KSU_COMMIT:0:12}"
 if [[ ! -d "${KERNEL_DIR}/KernelSU-Next" ]]; then
   cp -a "${KSU_DIR}" "${KERNEL_DIR}/KernelSU-Next"
 fi
@@ -34,12 +34,12 @@ if [[ ! -f "${WILD_KSU_PATCH}" ]]; then
   echo "ERROR: ${WILD_KSU_PATCH} missing -- re-run fetch-sources.sh" >&2
   exit 1
 fi
-echo "==> Applying Wild KSU<->SUSFS integration patch"
+echo "Applying Wild KSU<->SUSFS integration patch"
 (cd drivers/kernelsu && patch -p2 -F 3 -N --no-backup-if-mismatch \
   -r /tmp/wild-ksu.rej -i "${WILD_KSU_PATCH}")
 
 # SUSFS source files into the tree.
-echo "==> Staging SUSFS files into kernel tree"
+echo "Staging SUSFS files into kernel tree"
 cp -v "${SUSFS_DIR}/kernel_patches/fs/"*.c fs/
 cp -v "${SUSFS_DIR}/kernel_patches/include/linux/"*.h include/linux/
 
@@ -49,12 +49,12 @@ if [[ -z "${SUSFS_KERNEL_PATCH}" ]]; then
   echo "ERROR: no 50_add_susfs_*.patch in ${SUSFS_DIR}/kernel_patches/" >&2
   exit 1
 fi
-echo "==> Applying SUSFS kernel patch: ${SUSFS_KERNEL_PATCH##*/}"
+echo "Applying SUSFS kernel patch: ${SUSFS_KERNEL_PATCH##*/}"
 patch -p1 -F 3 -N --no-backup-if-mismatch -r /tmp/susfs.rej \
   -i "${SUSFS_KERNEL_PATCH}" || true
 
 # Module vermagic bypass so KSU modules load regardless of version string.
-echo "==> Applying module vermagic bypass hack"
+echo "Applying module vermagic bypass hack"
 if grep -q "bad_version:" kernel/module.c; then
   sed -i '/bad_version:/{:a;n;/return 0;/{s/return 0;/return 1;/;b};ba}' kernel/module.c
   if grep -A 5 "bad_version:" kernel/module.c | grep -q "return 1;"; then
@@ -75,7 +75,7 @@ else
 fi
 
 # Empty GKI protected-exports so out-of-tree symbols are freely usable.
-echo "==> Emptying GKI protected-exports list"
+echo "Emptying GKI protected-exports list"
 if ls android/abi_gki_protected_exports_* >/dev/null 2>&1; then
   for f in android/abi_gki_protected_exports_*; do
     : >"$f"
@@ -91,7 +91,7 @@ if grep -q "kallsyms_lookup_name" "${SELINUX_HIDE_C}" 2>/dev/null && ! grep -q "
 fi
 
 # KSU-Next x86_64 compatibility fixes.
-echo "==> Fixing KSU-Next x86_64 compatibility"
+echo "Fixing KSU-Next x86_64 compatibility"
 
 # compat_uptr_t needs linux/compat.h.
 KSUD_H="${KERNEL_DIR}/drivers/kernelsu/runtime/ksud.h"
@@ -112,10 +112,10 @@ if grep -q "test_thread_flag(TIF_SECCOMP)" "${APP_PROFILE}" 2>/dev/null; then
 fi
 
 # Our anti-emulator source customizations.
-echo "==> Customizing kernel source for AVD anti-detection"
-bash "${ROOT}/scripts/customize-kernel.sh" "${KERNEL_DIR}"
+echo "Customizing kernel source for AVD anti-detection"
+bash "${ROOT}/build/customize-kernel.sh" "${KERNEL_DIR}"
 
 touch "${KERNEL_DIR}/.avd-patches-applied"
 echo
-echo "==> All patches applied successfully."
-echo "    Next: scripts/build.sh"
+echo "All patches applied successfully."
+echo "    Next: build/build.sh"

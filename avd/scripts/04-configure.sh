@@ -26,14 +26,14 @@ suroot 'command -v ksud >/dev/null' ||
     exit 1
   }
 
-echo "==> Enabling Supreme profile"
+echo "Enabling Supreme profile"
 "$ADB" push "$(dirname "${BASH_SOURCE[0]}")/../config/custom.pif.prop" /data/local/tmp/custom.pif.prop
 suroot "cp /data/local/tmp/custom.pif.prop $PIF && chmod 0644 $PIF"
 
-echo "==> Writing canonical custom.pif.prop"
+echo "Writing canonical custom.pif.prop"
 suroot "rm -f $BOX_DIR/pixelify $BOX_DIR/legacy $BOX_DIR/wipe && touch $BOX_DIR/advanced && chmod 0644 $BOX_DIR/advanced"
 
-echo "==> Restarting GMS + Play Store so the spoof applies"
+echo "Restarting GMS + Play Store so the spoof applies"
 suroot 'am force-stop com.google.android.gms.unstable; am force-stop com.android.vending'
 
-echo "==> Done. Run avd/scripts/05-verify-integrity.sh to check the verdict."
+echo "Done. Run avd/scripts/05-verify-integrity.sh to check the verdict."
