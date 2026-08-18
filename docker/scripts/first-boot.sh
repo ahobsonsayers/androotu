@@ -24,7 +24,10 @@ bash "$SCRIPTS/01-create-avd.sh"
 
 # The emulator program (supervisor) boots this AVD. Wait for it to come up.
 echo "Waiting for emulator boot"
-"$ADB" wait-for-device || true
+for _ in $(seq 1 60); do
+  "$ADB" shell true 2>/dev/null && break
+  sleep 2
+done
 "$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
 
 echo "Installing modules"
