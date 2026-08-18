@@ -30,7 +30,7 @@ tasks:
   verify:
     desc: Check the stack + TEESimulator GENERATE mode
     cmds:
-      - avd/scripts/05-verify-integrity.sh
+      - avd/scripts/05-verify-setup.sh
 
   run:
     desc: Full flow — create AVD, boot, install modules, configure, verify

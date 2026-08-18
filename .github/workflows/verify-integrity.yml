@@ -85,14 +85,14 @@ jobs:
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          bash avd/scripts/05-verify-integrity.sh
+          bash avd/scripts/05-verify-setup.sh
 
       - name: Check Play Integrity verdict
         run: |
           export ANDROID_HOME="$HOME/Android/Sdk"
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
-          bash avd/scripts/06-check-verdict.sh
+          bash avd/scripts/06-verify-integrity.sh
 
       - name: Upload emulator log
         if: always()

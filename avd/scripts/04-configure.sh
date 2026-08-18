@@ -37,4 +37,4 @@ suroot "rm -f $BOX_DIR/pixelify $BOX_DIR/legacy $BOX_DIR/wipe && touch $BOX_DIR/
 echo "Restarting GMS + Play Store so the spoof applies"
 suroot 'am force-stop com.google.android.gms.unstable; am force-stop com.android.vending'
 
-echo "Done. Run avd/scripts/05-verify-integrity.sh to check the verdict."
+echo "Done. Run avd/scripts/05-verify-setup.sh to check the setup."

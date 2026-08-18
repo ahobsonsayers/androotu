@@ -16,7 +16,7 @@ task run              # install → boot → install:modules → configure → v
 task clean            # remove a36 AVD (keeps SDK + kernel)
 ```
 
-Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling release — AVD users don't build it), `avd/scripts/01-create-avd.sh` … `05-verify-integrity.sh`, and `avd/scripts/06-check-verdict.sh` (install SPIC, run a request, assert `MEETS_DEVICE_INTEGRITY`). Taskfile is thin — just calls `01`…`05`. `00` and `06` are standalone (not in the Taskfile chain).
+Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling release — AVD users don't build it), `avd/scripts/01-create-avd.sh` … `05-verify-setup.sh`, and `avd/scripts/06-verify-integrity.sh` (install SPIC, run a request, assert `MEETS_DEVICE_INTEGRITY`). Taskfile is thin — just calls `01`…`05`. `00` and `06` are standalone (not in the Taskfile chain).
 
 ## The stack (don't get wrong)
 
@@ -54,4 +54,4 @@ Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling
 ## Git
 
 - **Never commit without explicit user instruction** (override rule from global AGENTS.md).
-- Working tree on `main`; keep it clean. `06-check-verdict.sh` and the Docker/CI setup are part of the committed history — don't assume a clean tree is a fresh checkout.
+- Working tree on `main`; keep it clean. `06-verify-integrity.sh` and the Docker/CI setup are part of the committed history — don't assume a clean tree is a fresh checkout.

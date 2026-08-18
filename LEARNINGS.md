@@ -51,7 +51,7 @@ Fix: `am force-stop io.github.a13e300.ksuwebui` + relaunch, wait 8–12 s.
 
 - Keybox: broken placeholder and genuine CRL-clean Yurikey give identical verdict on A36
 - TEESimulator mode: confirmed GENERATE, still rejected
-- ABI props arm64-first, GSF re-register as tokay, leaked qemu/vport props, per-partition props + /proc bind + DMI spoof + security_patch.txt (reference verify-integrity.sh passes all its checks on our device)
+- ABI props arm64-first, GSF re-register as tokay, leaked qemu/vport props, per-partition props + /proc bind + DMI spoof + security_patch.txt (reference verify-setup.sh passes all its checks on our device)
 
 ## The wall: x86_64 vs arm64
 

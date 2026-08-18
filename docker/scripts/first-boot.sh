@@ -46,7 +46,7 @@ echo "Configuring Supreme profile"
 bash "$SCRIPTS/04-configure.sh"
 
 echo "Verifying stack"
-bash "$SCRIPTS/05-verify-integrity.sh"
+bash "$SCRIPTS/05-verify-setup.sh"
 
 touch /data/.first-boot-done
 echo "Success !!"

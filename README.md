@@ -11,6 +11,10 @@ combines a custom kernel (KernelSU-Next + SUSFS) with
 [Integrity Box](https://github.com/MeowDump/Integrity-Box), whose installer
 auto-fetches the attestation keybox and whose WebUI drives the PIF profile.
 
+The focus is Play Integrity, but the stack also does **best-effort root hiding**
+(SUSFS kernel-level hiding + ReZygisk) to try to get past other root-detection
+methods apps may use. It's not a guarantee — treat it as a bonus, not a promise.
+
 > [!WARNING]
 > This is a **development/testing tool**. `MEETS_DEVICE_INTEGRITY` is the
 > realistic x86_64 ceiling — see [Why not STRONG](#why-not-strong).
