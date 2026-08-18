@@ -122,10 +122,11 @@ Silicon) or a physical Pixel.
 
 ## Credits
 
-Built on [dockerify-android](https://github.com/Shmayro/dockerify-android),
-[Integrity Box](https://github.com/MeowDump/Integrity-Box),
-[KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next),
-[susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu),
-[TrickyStore](https://github.com/5ec1cff/TrickyStore), and
-[ReZygisk](https://github.com/RevokeForCash/ReZygisk). See
-[`LEARNINGS.md`](LEARNINGS.md) for the full journey and every pitfall.
+- [dockerify-android](https://github.com/Shmayro/dockerify-android) — the Docker/AVD architecture this is built on
+- [Integrity Box](https://github.com/MeowDump/Integrity-Box) — PIF profile + WebUI toggles + keybox
+- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — kernel-level root
+- [susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) — kernel-level root hiding
+- [TrickyStore](https://github.com/5ec1cff/TrickyStore) — TEESimulator attestation forging
+- [ReZygisk](https://github.com/RevokeForCash/ReZygisk) — Zygisk runtime for the module hooks
+
+See [`LEARNINGS.md`](LEARNINGS.md) for the full journey and every pitfall.
