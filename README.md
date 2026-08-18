@@ -2,7 +2,7 @@
 
 **A reproducible recipe for a rooted Android 16 (API 36, x86_64) emulator that passes Google Play Integrity with `MEETS_DEVICE_INTEGRITY`.**
 
-[![Verdict](https://img.shields.io/badge/Play_Integrity-MEETS__DEVICE__INTEGRITY-3fd07f?style=flat-square)](docs/LEARNINGS.md)
+[![Verdict](https://img.shields.io/badge/Play_Integrity-MEETS__DEVICE__INTEGRITY-3fd07f?style=flat-square)](LEARNINGS.md)
 [![Device](https://img.shields.io/badge/device-Pixel_8_·_android--36_·_x86__64-4f8cff?style=flat-square)](avd/config/custom.pif.prop)
 [![Kernel](https://img.shields.io/badge/kernel-custom_6.6_·_KSU--Next_+_SUSFS-7c5cff?style=flat-square)](kernel/)
 [![Type](https://img.shields.io/badge/contents-source_+_scripts_only-6b7689?style=flat-square)](#scope)
@@ -30,7 +30,7 @@ TEESimulator forges the hardware attestation chain from that keybox.
 | [`kernel/`](kernel/) | Docker + scripts that build AOSP `common-android15-6.6` with KSU-Next, SUSFS, module-vermagic bypass, and AVD anti-detection tweaks. Output: `out/bzImage-a36-btf`. |
 | [`docker/`](docker/) | A self-contained Docker image (multi-stage: compiles the kernel, bakes it in) that runs the same rooted AVD in a container, published to GHCR. |
 | [`Taskfile.yml`](Taskfile.yml) | Thin wrapper over `avd/scripts/` (`task install` → `task run` → `task verify`). |
-| [`docs/LEARNINGS.md`](docs/LEARNINGS.md) | The full journey and every pitfall. |
+| [`LEARNINGS.md`](LEARNINGS.md) | The full journey and every pitfall. |
 
 ## Quick start
 
@@ -40,7 +40,30 @@ building the kernel yourself.
 
 ### Option A — Docker image (recommended, self-contained)
 
-The image compiles the kernel and bakes it in, so there's nothing to build:
+The image is **self-contained**: a multi-stage build compiles the KSU/SUSFS
+kernel from source (stage 1) and bakes it in (stage 2), so there's nothing to
+build. It runs two containers mirroring
+[dockerify-android](https://github.com/Shmayro/dockerify-android):
+
+- **`a36-integrity`** — the emulator, booted with the custom KSU/SUSFS kernel.
+  Exposes ADB on `:5555`. The AVD + userdata live in a persistent `/data`
+  volume.
+- **`scrcpy-web`** — browser control of the emulator at `:8000`.
+
+> **Credits:** This project is built on the architecture, Dockerfile layout, and
+> first-boot provisioning model of
+> [Shmayro/dockerify-android](https://github.com/Shmayro/dockerify-android)
+> (supervisord programs, socat ADB forwarding, `/data` volume, first-boot
+> marker). Where dockerify runs a plain AOSP AVD, this project swaps in the
+> custom KSU/SUSFS kernel and the Integrity Box module stack so the emulator
+> passes device integrity. Everything here is layered on top of dockerify's
+> approach — big thanks to that project.
+
+**Prerequisites:** Docker with **KVM** passthrough (`/dev/kvm`). x86_64 host
+only — the custom kernel is x86_64, so this does **not** run on arm64/Apple
+Silicon.
+
+**Pull from GHCR** (no build needed):
 
 ```bash
 docker pull ghcr.io/ahobsonsayers/androotu:latest
@@ -51,9 +74,58 @@ docker run -d --name a36-integrity \
   ghcr.io/ahobsonsayers/androotu:latest
 ```
 
-First boot provisions the AVD (~10-20 min; watch `docker logs -f a36-integrity`
-for `Success !!`). See [`docker/README.md`](docker/README.md) for the full
-build/run/use guide.
+**Or build it yourself:**
+
+```bash
+cd docker
+docker compose build
+docker compose up -d
+```
+
+The build bakes in the A36 system image, the custom kernel, and the module
+zips/APKs. Rebuild to refresh the modules (e.g. when a keybox is revoked).
+
+First boot provisions the AVD (creates it, installs Integrity Box +
+TEESimulator + ReZygisk + SUSFS + WebUI, configures the Supreme profile,
+verifies). This takes ~10-20 min. Watch it:
+
+```bash
+docker logs -f a36-integrity
+```
+
+You'll know it's done when you see `Success !!`.
+
+**Use:** The Play Store image forces `ro.adb.secure=1`, so external ADB clients
+must present the image's baked-in key. The image ships a deterministic adb
+keypair at `/root/.android/adbkey` (generated at build time). Point your host
+adb at it via `ADB_VENDOR_KEYS`:
+
+```bash
+# Extract the baked key once (it's identical for every container instance).
+docker run --rm --entrypoint cat a36-integrity:latest /root/.android/adbkey > adbkey
+
+# Connect with that key.
+ADB_VENDOR_KEYS=$PWD/adbkey adb connect localhost:5555
+ADB_VENDOR_KEYS=$PWD/adbkey adb devices
+```
+
+`scrcpy-web` uses the container's own adb, so it needs no key setup. Browser UI:
+open `http://localhost:8000`.
+
+**Docker notes:**
+
+- **Keybox is not baked in.** Integrity Box's installer auto-fetches it at
+  first boot into `/data/adb/tricky_store/keybox.xml`. Never hand-edit it.
+- **User data persists** in `./data` (the AVD's data partition is pinned to
+  `./data/a36.avd/userdata-qemu.img` via `-data`). To start clean, delete the
+  volume and re-run (a fresh install auto-fetches a working keybox).
+  **Persistence is optional:** mount `./data` as a volume (as in `compose.yml`)
+  to keep user data across restarts, or omit the mount to run a stateless
+  ephemeral emulator.
+- **Never restart `keymint`/`keystore2`/`TEESimulator`** after boot — it flips
+  TEESimulator from GENERATE to PATCH mode and drops the verdict. Cold reboot
+  to recover.
+- The emulator bumps RAM to 2048MB internally regardless of `-memory`.
 
 ### Option B — Native AVD on your host
 
@@ -86,7 +158,7 @@ After a clean boot, confirm TEESimulator is in GENERATE mode:
 task verify    # read-only; checks GENERATE-vs-PATCH, modules, props
 ```
 
-The full story is in [`docs/LEARNINGS.md`](docs/LEARNINGS.md).
+The full story is in [`LEARNINGS.md`](LEARNINGS.md).
 
 ## The keybox (read this)
 
@@ -131,7 +203,7 @@ roots to a self-signed TEE root, not Google's genuine hardware attestation
 root — Google grants DEVICE but refuses STRONG. Passing STRONG requires a
 keybox chaining to a real Google hardware root (real device TEE or genuine
 leak), which means an arm64 host (Apple Silicon) or a physical Pixel. See
-`docs/LEARNINGS.md` for the full analysis.
+`LEARNINGS.md` for the full analysis.
 
 ## Taskfile
 

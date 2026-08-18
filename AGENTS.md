@@ -2,7 +2,7 @@
 
 Taskfile-driven rooted Android 16 (API 36, x86_64) emulator passing **MEETS_DEVICE_INTEGRITY** via Integrity Box on a KSU-Next + SUSFS kernel.
 
-Read `docs/LEARNINGS.md` before touching the stack — it has the full `UNEVALUATED`→`NO_INTEGRITY`→`MEETS_DEVICE_INTEGRITY` journey, the x86_64 ceiling, and every pitfall.
+Read `LEARNINGS.md` before touching the stack — it has the full `UNEVALUATED`→`NO_INTEGRITY`→`MEETS_DEVICE_INTEGRITY` journey, the x86_64 ceiling, and every pitfall.
 
 ## Commands
 
