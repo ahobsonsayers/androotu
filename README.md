@@ -53,6 +53,32 @@ ADB_VENDOR_KEYS=$PWD/adbkey adb connect localhost:5555
 
 Browser control is available at `http://localhost:8000` (scrcpy-web).
 
+#### Custom startup scripts
+
+To install extra apps or modules on first boot, drop `.sh` scripts into a
+directory and mount it at `/opt/scripts`. They run in sorted order after the
+stack is up, so `adb` and `su` are available:
+
+```bash
+docker run -d --name androotu \
+  --device /dev/kvm \
+  --privileged \
+  -p 5555:5555 \
+  -v "$PWD/data:/data" \
+  -v "$PWD/my-scripts:/opt/scripts" \
+  ghcr.io/ahobsonsayers/androotu:latest
+```
+
+For example, `my-scripts/01-install-app.sh`:
+
+```bash
+#!/usr/bin/env bash
+adb install /opt/scripts/my-app.apk
+```
+
+Scripts run once per `/data` volume (first boot only). To re-run them, wipe the
+volume or remove `/data/.first-boot-done`.
+
 ### Option B — Native AVD
 
 Requires `ANDROID_HOME` with the `system-images;android-36;google_apis_playstore;x86_64`

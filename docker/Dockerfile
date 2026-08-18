@@ -69,7 +69,7 @@ ENV PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ADB_DIR:$PATH"
 
 RUN mkdir -p /root/.android && \
     touch /root/.android/repositories.cfg && \
-    mkdir -p /data /extras /opt/kernel /opt/modules
+    mkdir -p /data /extras /opt/kernel /opt/modules /opt/scripts
 
 # Bake in the A36 x86_64 Play Store system image (multi-GB, one-time).
 RUN yes | sdkmanager --sdk_root=$ANDROID_HOME \

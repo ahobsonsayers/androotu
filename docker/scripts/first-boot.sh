@@ -12,6 +12,7 @@ AH="${ANDROID_HOME:-/opt/android-sdk}"
 ADB="$AH/platform-tools/adb"
 AVD="${AVD:-a36}"
 SCRIPTS="${SCRIPTS:-/root/scripts}"
+USER_SCRIPTS="${USER_SCRIPTS:-/opt/scripts}"
 
 export ANDROID_HOME="$AH"
 export ANDROID_AVD_HOME=/data
@@ -47,6 +48,16 @@ bash "$SCRIPTS/04-configure.sh"
 
 echo "Verifying stack"
 bash "$SCRIPTS/05-verify-setup.sh"
+
+# Run any user-provided startup scripts in sorted order. These run after the
+# stack is up, so they can install apps or extra modules via adb/su.
+if [ -d "$USER_SCRIPTS" ]; then
+  for script in "$USER_SCRIPTS"/*.sh; do
+    [ -e "$script" ] || continue
+    echo "Running user script: $script"
+    bash "$script"
+  done
+fi
 
 touch /data/.first-boot-done
 echo "Success !!"
