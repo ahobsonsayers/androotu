@@ -1,9 +1,7 @@
-/tmp/
+.superpowers/
 docker/data*/
 kernel/.ccache/
-kernel/build*.log
 kernel/dist/
 kernel/sources/
 *.img
 *.qcow2
-.superpowers/

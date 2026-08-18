@@ -1,8 +1,8 @@
 .git
+*.md
 avd/scripts
 docker/data
 docker/compose.yml
-*.md
 kernel/dist
 kernel/sources
 kernel/.ccache
