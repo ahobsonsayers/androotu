@@ -1,6 +1,5 @@
 .git
 *.md
-avd/scripts
 docker/data
 docker/compose.yml
 kernel/dist
