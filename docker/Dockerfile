@@ -69,7 +69,7 @@ ENV PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ADB_DIR:$PATH"
 
 RUN mkdir -p /root/.android && \
     touch /root/.android/repositories.cfg && \
-    mkdir -p /data /extras /opt/kernel /opt/modules /opt/scripts
+    mkdir -p /data /extras /opt/kernel /root/modules /opt/scripts
 
 # Bake in the A36 x86_64 Play Store system image (multi-GB, one-time).
 RUN yes | sdkmanager --sdk_root=$ANDROID_HOME \
@@ -94,15 +94,15 @@ ARG SUSFS_URL="https://github.com/sidex15/susfs4ksu-module/releases/download/v1.
 ARG IB_URL="https://github.com/MeowDump/Integrity-Box/releases/download/v40/v40-Integrity-Box-05-08-2026.zip"
 ARG KSU_WEBUI_URL="https://github.com/5ec1cff/KsuWebUIStandalone/releases/download/v1.0/KsuWebUI-1.0-34-release.apk"
 ARG KSU_NEXT_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/KernelSU_Next_v3.2.0_33129-release.apk"
-RUN curl -fsSL -o /opt/modules/teesimulator.zip "$TEE_URL" && \
-    curl -fsSL -o /opt/modules/rezygisk.zip "$REZYGISK_URL" && \
-    curl -fsSL -o /opt/modules/susfs.zip "$SUSFS_URL" && \
-    curl -fsSL -o /opt/modules/integrity-box.zip "$IB_URL" && \
-    curl -fsSL -o /opt/modules/ksuwebui.apk "$KSU_WEBUI_URL" && \
-    curl -fsSL -o /opt/modules/ksunext.apk "$KSU_NEXT_URL"
+RUN curl -fsSL -o /root/modules/teesimulator.zip "$TEE_URL" && \
+    curl -fsSL -o /root/modules/rezygisk.zip "$REZYGISK_URL" && \
+    curl -fsSL -o /root/modules/susfs.zip "$SUSFS_URL" && \
+    curl -fsSL -o /root/modules/integrity-box.zip "$IB_URL" && \
+    curl -fsSL -o /root/modules/ksuwebui.apk "$KSU_WEBUI_URL" && \
+    curl -fsSL -o /root/modules/ksunext.apk "$KSU_NEXT_URL"
 
 # Bake in the canonical PIF profile (Supreme toggle combo).
-COPY avd/config/custom.pif.prop /opt/modules/custom.pif.prop
+COPY avd/config/custom.pif.prop /root/modules/custom.pif.prop
 
 # Supervisor + boot scripts. first-boot.sh orchestrates the shared avd/scripts.
 COPY docker/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf

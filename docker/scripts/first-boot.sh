@@ -16,8 +16,8 @@ USER_SCRIPTS="${USER_SCRIPTS:-/opt/scripts}"
 
 export ANDROID_HOME="$AH"
 export ANDROID_AVD_HOME=/data
-export MODULES_DIR=/opt/modules
-export PIF_SRC=/opt/modules/custom.pif.prop
+export MODULES_DIR=/root/modules
+export PIF_SRC=/root/modules/custom.pif.prop
 
 wait_boot() {
   "$ADB" wait-for-device || true
