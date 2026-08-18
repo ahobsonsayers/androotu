@@ -71,8 +71,8 @@ docker run -d --name androotu \
 
 The repo ships two working examples in [`extensions/`](extensions/):
 
-- `01-install-bindhosts.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`.
-- `02-install-adaway.sh` — installs the [AdAway](https://github.com/AdAway/AdAway) app (open-source ad blocker) via `adb install`.
+- `01-install-bindhosts-module.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`.
+- `02-install-adaway-app.sh` — installs the [AdAway](https://github.com/AdAway/AdAway) app (open-source ad blocker) via `adb install`.
 
 > [!NOTE]
 > `ksud module install` only stages a module — it activates on the **next boot**.
