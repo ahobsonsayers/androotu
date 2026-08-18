@@ -7,23 +7,10 @@ vars:
   SERIAL: emulator-5554
 
 tasks:
-  # ─── Install (one-time setup) ────────────────────────────────────────────
-
   install:
-    desc: One-time setup — create the a36 AVD
+    desc: Create the a36 AVD
     cmds:
       - avd/scripts/01-create-avd.sh
-
-  # ─── Run (full integrity stack) ─────────────────────────────────────────
-
-  run:
-    desc: Full flow — create AVD, boot, install modules, configure, verify
-    cmds:
-      - task: install
-      - task: boot
-      - task: install:modules
-      - task: configure
-      - task: verify
 
   boot:
     desc: Boot the a36 emulator headless with the custom kernel
@@ -45,7 +32,14 @@ tasks:
     cmds:
       - avd/scripts/05-verify-integrity.sh
 
-  # ─── Lint ────────────────────────────────────────────────────────────────
+  run:
+    desc: Full flow — create AVD, boot, install modules, configure, verify
+    cmds:
+      - task: install
+      - task: boot
+      - task: install:modules
+      - task: configure
+      - task: verify
 
   lint:
     desc: Format (shfmt -i 2) and shellcheck all scripts
@@ -53,8 +47,6 @@ tasks:
       - shfmt -i 2 -w avd/scripts/*.sh kernel/build/*.sh docker/scripts/*.sh
       - shellcheck -x avd/scripts/*.sh kernel/build/*.sh docker/scripts/*.sh
       - bash -n avd/scripts/*.sh kernel/build/*.sh docker/scripts/*.sh
-
-  # ─── Cleanup ─────────────────────────────────────────────────────────────
 
   clean:
     desc: Remove the a36 AVD. Requires confirmation.
