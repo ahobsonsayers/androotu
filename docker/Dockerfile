@@ -1,42 +1,8 @@
-# Stage 1: build the KSU/SUSFS kernel from source so the image is fully
-# self-contained (no prebuilt bzImage needed in the build context). Reuses the
-# same toolchain + scripts as kernel/Dockerfile.
-FROM ubuntu:24.04 AS kernel-builder
+# Emulator runtime. Kernel comes from the -kernel image built by build-kernel.yml.
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        bc bison build-essential \
-        ca-certificates clang cpio curl \
-        device-tree-compiler dwarves \
-        flex \
-        git \
-        kmod \
-        libelf-dev libssl-dev lld llvm llvm-dev lz4 \
-        openssl \
-        python3 \
-        rsync \
-        unzip \
-        wget xz-utils \
-        zstd \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN git config --global user.email "kbuild@local" \
- && git config --global user.name "kbuild" \
- && git config --global init.defaultBranch main \
- && git config --global advice.detachedHead false
-
-ENV CCACHE_DIR=/work/.ccache
-ENV PATH="/usr/lib/ccache:${PATH}"
-
-WORKDIR /work
-COPY kernel/build /work/scripts
-RUN bash /work/scripts/build-all.sh
-RUN mkdir -p /kernel && cp /work/dist/bzImage /kernel/bzImage
-
-# Stage 2: the emulator runtime.
-FROM ubuntu:24.04
 
 # Base tooling (mirrors dockerify-android).
 RUN apt-get update && \
@@ -60,6 +26,11 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+ENV ANDROID_HOME=/opt/android-sdk
+ENV ANDROID_AVD_HOME=/data
+ENV ADB_DIR="$ANDROID_HOME/platform-tools"
+ENV PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ADB_DIR:$PATH"
+
 # Android SDK: cmdline-tools, emulator, platform-tools, A36 x86_64 Play Store image.
 RUN mkdir -p /opt/android-sdk/cmdline-tools && \
     cd /opt/android-sdk/cmdline-tools && \
@@ -69,36 +40,27 @@ RUN mkdir -p /opt/android-sdk/cmdline-tools && \
     mv latest/cmdline-tools/* latest/ || true && \
     rm -rf latest/cmdline-tools || true
 
-ENV ANDROID_HOME=/opt/android-sdk
-ENV ANDROID_AVD_HOME=/data
-ENV ADB_DIR="$ANDROID_HOME/platform-tools"
-ENV PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ADB_DIR:$PATH"
-
 RUN mkdir -p /root/.android && \
     touch /root/.android/repositories.cfg && \
     mkdir -p /data /extras /opt/kernel /root/modules /opt/scripts
 
-# Bake in the A36 x86_64 Play Store system image (multi-GB, one-time).
+# Multi-GB Play Store system image, baked once.
 RUN yes | sdkmanager --sdk_root=$ANDROID_HOME \
         "emulator" "platform-tools" "platforms;android-36" \
         "system-images;android-36;google_apis_playstore;x86_64" && \
     rm -f /opt/android-sdk/emulator/crashpad_handler
 
-# Bake a deterministic adb keypair into the image. The Play Store image forces
-# ro.adb.secure=1 (adbd ignores -prop ro.adb.secure=0), so external ADB clients
-# must present a trusted key via ADB_VENDOR_KEYS. Starting the adb server once
-# generates ~/.android/adbkey + adbkey.pub in adb's native format; baking it in
-# means every container instance shares the same key and stays pre-authorized.
+# Bake a deterministic adb keypair (Play Store image forces ro.adb.secure=1; clients need a trusted ADB_VENDOR_KEY).
 RUN adb start-server && adb kill-server
 
-# Bake in the custom KSU/SUSFS kernel (required for root), built in stage 1.
-COPY --from=kernel-builder /kernel/bzImage /opt/kernel/bzImage-a36-btf
+# KSU/SUSFS kernel baked in from the kernel-builder image.
+ARG KERNEL_BUILDER_IMAGE=ghcr.io/ahobsonsayers/androotu-kernel:latest
+COPY --from=${KERNEL_BUILDER_IMAGE} /kernel/bzImage /opt/kernel/bzImage-a36-btf
 
-# uv: self-contained static binary; `uv tool run` runs CLI tools from PyPI in
-# an isolated venv (avoids Ubuntu's PEP 668 externally-managed Python).
+# uv: self-contained static binary; runs CLI tools from PyPI in an isolated venv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Bake in the module zips + manager/WebUI APKs (rebuilt to refresh).
+# Module zips + manager/WebUI APKs (rebuilt to refresh).
 ARG TEE_URL="https://github.com/JingMatrix/TEESimulator/releases/download/v3.2/TEESimulator-v3.2-67-Release.zip"
 ARG REZYGISK_URL="https://raw.githubusercontent.com/ThePedroo/RemoteFiles/refs/heads/main/ReZygisk/ReZygisk.zip"
 ARG SUSFS_URL="https://github.com/sidex15/susfs4ksu-module/releases/download/v1.5.2%2B_R27/ksu_module_susfs_1.5.2%2B.zip"
@@ -114,10 +76,10 @@ RUN curl -fsSL -o /root/modules/teesimulator.zip "$TEE_URL" && \
     curl -fsSL -o /root/modules/ksuwebui.apk "$KSU_WEBUI_URL" && \
     curl -fsSL -o /root/modules/ksunext.apk "$KSU_NEXT_URL"
 
-# Bake in the canonical PIF profile (Supreme toggle combo).
+# Canonical PIF profile (Supreme toggle combo).
 COPY avd/config/custom.pif.prop /root/modules/custom.pif.prop
 
-# Supervisor + boot scripts. first-boot.sh orchestrates the shared avd/scripts.
+# Supervisor + boot scripts. first-boot.sh runs avd/scripts once per /data.
 COPY docker/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/scripts/start-emulator.sh /root/start-emulator.sh
 COPY docker/scripts/first-boot.sh /root/first-boot.sh
