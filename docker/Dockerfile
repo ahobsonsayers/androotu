@@ -94,6 +94,10 @@ RUN adb start-server && adb kill-server
 # Bake in the custom KSU/SUSFS kernel (required for root), built in stage 1.
 COPY --from=kernel-builder /kernel/bzImage /opt/kernel/bzImage-a36-btf
 
+# uv: self-contained static binary; `uv tool run` runs CLI tools from PyPI in
+# an isolated venv (avoids Ubuntu's PEP 668 externally-managed Python).
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
 # Bake in the module zips + manager/WebUI APKs (rebuilt to refresh).
 ARG TEE_URL="https://github.com/JingMatrix/TEESimulator/releases/download/v3.2/TEESimulator-v3.2-67-Release.zip"
 ARG REZYGISK_URL="https://raw.githubusercontent.com/ThePedroo/RemoteFiles/refs/heads/main/ReZygisk/ReZygisk.zip"
