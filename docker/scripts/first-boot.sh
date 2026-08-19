@@ -28,6 +28,7 @@ for _ in $(seq 1 60); do
   "$ADB" shell true 2>/dev/null && break
   sleep 2
 done
+# shellcheck disable=SC2016
 "$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
 
 echo "Installing modules"

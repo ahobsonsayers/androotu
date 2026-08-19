@@ -98,12 +98,14 @@ ARG TEE_URL="https://github.com/JingMatrix/TEESimulator/releases/download/v3.2/T
 ARG REZYGISK_URL="https://raw.githubusercontent.com/ThePedroo/RemoteFiles/refs/heads/main/ReZygisk/ReZygisk.zip"
 ARG SUSFS_URL="https://github.com/sidex15/susfs4ksu-module/releases/download/v1.5.2%2B_R27/ksu_module_susfs_1.5.2%2B.zip"
 ARG IB_URL="https://github.com/MeowDump/Integrity-Box/releases/download/v40/v40-Integrity-Box-05-08-2026.zip"
+ARG BKI_URL="https://github.com/Pixel-Props/BetterKnownInstalled/releases/download/1500/BetterKnownInstalled-v1.5.0.zip"
 ARG KSU_WEBUI_URL="https://github.com/5ec1cff/KsuWebUIStandalone/releases/download/v1.0/KsuWebUI-1.0-34-release.apk"
 ARG KSU_NEXT_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/KernelSU_Next_v3.2.0_33129-release.apk"
 RUN curl -fsSL -o /root/modules/teesimulator.zip "$TEE_URL" && \
     curl -fsSL -o /root/modules/rezygisk.zip "$REZYGISK_URL" && \
     curl -fsSL -o /root/modules/susfs.zip "$SUSFS_URL" && \
     curl -fsSL -o /root/modules/integrity-box.zip "$IB_URL" && \
+    curl -fsSL -o /root/modules/better-known-installed.zip "$BKI_URL" && \
     curl -fsSL -o /root/modules/ksuwebui.apk "$KSU_WEBUI_URL" && \
     curl -fsSL -o /root/modules/ksunext.apk "$KSU_NEXT_URL"
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Install the module stack (TEESimulator, ReZygisk, SUSFS, Integrity Box)
-# + WebUI/manager apps, then reboot. Keybox is auto-fetched by the installer.
+# Install the module stack (TEESimulator, ReZygisk, SUSFS, Integrity Box,
+# BetterKnownInstalled) + WebUI/manager apps, then reboot. Keybox is
+# auto-fetched by the installer.
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
@@ -14,12 +15,14 @@ if [ -n "${MODULES_DIR:-}" ]; then
   echo "Using pre-baked modules from $MODULES_DIR"
   cp "$MODULES_DIR"/teesimulator.zip "$MODULES_DIR"/rezygisk.zip \
     "$MODULES_DIR"/susfs.zip "$MODULES_DIR"/integrity-box.zip \
+    "$MODULES_DIR"/better-known-installed.zip \
     "$MODULES_DIR"/ksuwebui.apk "$MODULES_DIR"/ksunext.apk "$TMP"/
 else
   TEE_URL="https://github.com/JingMatrix/TEESimulator/releases/download/v3.2/TEESimulator-v3.2-67-Release.zip"
   REZYGISK_URL="https://raw.githubusercontent.com/ThePedroo/RemoteFiles/refs/heads/main/ReZygisk/ReZygisk.zip"
   SUSFS_URL="https://github.com/sidex15/susfs4ksu-module/releases/download/v1.5.2%2B_R27/ksu_module_susfs_1.5.2%2B.zip"
   IB_URL="https://github.com/MeowDump/Integrity-Box/releases/download/v40/v40-Integrity-Box-05-08-2026.zip"
+  BKI_URL="https://github.com/Pixel-Props/BetterKnownInstalled/releases/download/1500/BetterKnownInstalled-v1.5.0.zip"
   KSU_WEBUI_URL="https://github.com/5ec1cff/KsuWebUIStandalone/releases/download/v1.0/KsuWebUI-1.0-34-release.apk"
   # Manager MUST be v3.2.0 — matches the kernel's embedded ksud; v3.3.0 refuses to work.
   KSU_NEXT_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/KernelSU_Next_v3.2.0_33129-release.apk"
@@ -29,6 +32,7 @@ else
   curl -fsSL -o "$TMP/rezygisk.zip" "$REZYGISK_URL"
   curl -fsSL -o "$TMP/susfs.zip" "$SUSFS_URL"
   curl -fsSL -o "$TMP/integrity-box.zip" "$IB_URL"
+  curl -fsSL -o "$TMP/better-known-installed.zip" "$BKI_URL"
   curl -fsSL -o "$TMP/ksuwebui.apk" "$KSU_WEBUI_URL"
   curl -fsSL -o "$TMP/ksunext.apk" "$KSU_NEXT_URL"
 fi
@@ -50,6 +54,7 @@ install_module "TEESimulator" teesimulator.zip
 install_module "ReZygisk" rezygisk.zip
 install_module "SUSFS-for-KernelSU" susfs.zip
 install_module "Integrity Box" integrity-box.zip
+install_module "BetterKnownInstalled" better-known-installed.zip
 
 echo "Installing KsuWebUIStandalone"
 "$ADB" install -r "$TMP/ksuwebui.apk"
@@ -57,4 +62,5 @@ echo "Installing KsuWebUIStandalone"
 echo "Rebooting to activate the modules"
 "$ADB" reboot
 "$ADB" wait-for-device
+# shellcheck disable=SC2016
 "$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''

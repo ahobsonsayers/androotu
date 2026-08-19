@@ -1,6 +1,6 @@
 # androotu
 
-**A rooted Android emulator — run it in Docker or natively — that passes Google Play Integrity with `MEETS_DEVICE_INTEGRITY`.**
+**A rooted Android emulator — run it in Docker or natively — that passes Google Play Integrity with `MEETS_DEVICE_INTEGRITY` and Automatic Integrity Protection (AIP).**
 
 [![Verdict](https://img.shields.io/badge/Play_Integrity-MEETS__DEVICE__INTEGRITY-3fd07f?style=flat-square)](LEARNINGS.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -14,6 +14,12 @@ auto-fetches the attestation keybox and whose WebUI drives the PIF profile.
 The focus is Play Integrity, but the stack also does **best-effort root hiding**
 (SUSFS kernel-level hiding + ReZygisk) to try to get past other root-detection
 methods apps may use. It's not a guarantee — treat it as a bonus, not a promise.
+
+It also passes **Automatic Integrity Protection (AIP / PairIP)**, so apps that
+check whether they were installed from the Play Store (via `com.pairip.licensecheck`)
+won't flag this image as a sideloaded install. This is handled by
+[BetterKnownInstalled](https://github.com/Pixel-Props/BetterKnownInstalled), which
+patches `packages.xml` to present every app as Play Store–installed.
 
 > [!WARNING]
 > This is a **development/testing tool**. `MEETS_DEVICE_INTEGRITY` is the
@@ -129,6 +135,7 @@ Silicon) or a physical Pixel.
 
 - [dockerify-android](https://github.com/Shmayro/dockerify-android) — the Docker/AVD architecture this is built on
 - [Integrity Box](https://github.com/MeowDump/Integrity-Box) — PIF profile + WebUI toggles + keybox
+- [BetterKnownInstalled](https://github.com/Pixel-Props/BetterKnownInstalled) — patches `packages.xml` so installed apps present as Play Store installs (helps AIP/PairIP)
 - [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next) — kernel-level root
 - [susfs4ksu](https://gitlab.com/simonpunk/susfs4ksu) — kernel-level root hiding
 - [TrickyStore](https://github.com/5ec1cff/TrickyStore) — TEESimulator attestation forging
