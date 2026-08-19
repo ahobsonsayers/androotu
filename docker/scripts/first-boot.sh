@@ -23,13 +23,17 @@ echo "Creating AVD $AVD"
 bash "$SCRIPTS/01-create-avd.sh"
 
 # The emulator program (supervisor) boots this AVD. Wait for it to come up.
+# Poll getprop from the host so a transient adbd drop mid-boot can't kill us.
 echo "Waiting for emulator boot"
-for _ in $(seq 1 60); do
-  "$ADB" shell true 2>/dev/null && break
-  sleep 2
+for _ in $(seq 1 120); do
+  BC=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n' || true)
+  [ "$BC" = "1" ] && break
+  sleep 3
 done
-# shellcheck disable=SC2016
-"$ADB" shell 'timeout 360 sh -c '\''while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 1; done'\'''
+if [ "${BC:-}" != "1" ]; then
+  echo "FAIL: emulator did not boot in time" >&2
+  exit 1
+fi
 
 echo "Installing modules"
 bash "$SCRIPTS/03-install-modules.sh"
