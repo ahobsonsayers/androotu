@@ -87,6 +87,9 @@ jobs:
     permissions:
       actions: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Dispatch build-docker
         run: |
           gh workflow run build-docker.yml --ref main
