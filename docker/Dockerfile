@@ -1,4 +1,9 @@
-# Emulator runtime. Kernel comes from the -kernel image built by build-kernel.yml.
+# Kernel from the -kernel image (built by build-kernel.yml). Global-scope ARG + named stage = supported --from param.
+ARG KERNEL_BUILDER_IMAGE=ghcr.io/ahobsonsayers/androotu-kernel:latest
+
+FROM ${KERNEL_BUILDER_IMAGE} AS kernel
+
+# Emulator runtime.
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -53,9 +58,8 @@ RUN yes | sdkmanager --sdk_root=$ANDROID_HOME \
 # Bake a deterministic adb keypair (Play Store image forces ro.adb.secure=1; clients need a trusted ADB_VENDOR_KEY).
 RUN adb start-server && adb kill-server
 
-# KSU/SUSFS kernel baked in from the kernel-builder image.
-ARG KERNEL_BUILDER_IMAGE=ghcr.io/ahobsonsayers/androotu-kernel:latest
-COPY --from=${KERNEL_BUILDER_IMAGE} /kernel/bzImage /opt/kernel/bzImage-a36-btf
+# KSU/SUSFS kernel copied from the kernel-builder image stage.
+COPY --from=kernel /kernel/bzImage /opt/kernel/bzImage-a36-btf
 
 # uv: self-contained static binary; runs CLI tools from PyPI in an isolated venv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
