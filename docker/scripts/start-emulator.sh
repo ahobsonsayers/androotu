@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
-# Boot the a36 AVD headless with the custom KSU/SUSFS kernel.
-# Runs in the foreground so supervisor can manage/restart it.
+# Boot the a36 AVD headless with the custom KSU/SUSFS kernel (foreground for supervisor).
 set -euo pipefail
 
 AH="${ANDROID_HOME:-/opt/android-sdk}"
 AVD="${AVD:-a36}"
 
-# Forward the emulator's localhost ADB to eth0 so other containers (scrcpy-web)
-# and the host can reach it on :5555.
+# Forward the emulator's localhost ADB to eth0 so other containers/host can reach :5555.
 LOCAL_IP=$(ip addr list eth0 2>/dev/null | grep "inet " | cut -d' ' -f6 | cut -d/ -f1)
 if [ -n "$LOCAL_IP" ]; then
   socat tcp-listen:5555,bind="$LOCAL_IP",fork tcp:127.0.0.1:5555 &
