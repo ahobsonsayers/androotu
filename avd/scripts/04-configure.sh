@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Configure Integrity Box for MEETS_DEVICE_INTEGRITY:
-#   Supreme profile (Pixel 8 shiba CANARY) + the toggle combo that passes.
+# Configure Integrity Box: Supreme profile (Pixel 8 shiba CANARY) + the toggle combo that passes.
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
@@ -9,8 +8,7 @@ MOD_DIR="/data/adb/modules/playintegrityfix"
 BOX_DIR="/data/adb/Box-Brain"
 PIF="$MOD_DIR/custom.pif.prop"
 
-# Nested `su root -c` is reliable; plain `su -c` intermittently rejects /data/adb.
-# Commands passed here must not contain single quotes.
+# Nested `su root -c` is reliable; plain `su -c` intermittently rejects /data/adb. No single quotes in args.
 suroot() {
   for _ in 1 2 3 4 5; do
     if "$ADB" shell su -c "su root -c '$1'" 2>/dev/null; then return 0; fi

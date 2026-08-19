@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Install SPIC, run a Play Integrity request, and assert MEETS_DEVICE_INTEGRITY.
-# Exits non-zero if the verdict is anything else (e.g. NO_INTEGRITY).
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"

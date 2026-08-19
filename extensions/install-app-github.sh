@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Install the AdAway app (open-source ad blocker).
-# Runs on first boot after the stack is up, so adb is available.
+# Install the AdAway app (open-source ad blocker). Runs on first boot after the stack is up.
 set -euo pipefail
 
 ADB="${ADB:-/opt/android-sdk/platform-tools/adb}"

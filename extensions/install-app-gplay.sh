@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Install an app from the Play Store via gplaydl (anonymous Aurora dispenser).
-# Runs on first boot after the stack is up, so adb is available.
+# Install an app from the Play Store via gplaydl (anonymous Aurora dispenser). Runs on first boot.
 set -euo pipefail
 
 ADB="${ADB:-/opt/android-sdk/platform-tools/adb}"

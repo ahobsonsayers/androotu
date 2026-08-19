@@ -31,8 +31,7 @@ done
   exit 1
 }
 
-# The emulator only searches $ANDROID_AVD_HOME, $ANDROID_SDK_HOME/avd and
-# $HOME/.android/avd. If avdmanager wrote it elsewhere (XDG layout), relocate it.
+# Emulator only searches $ANDROID_AVD_HOME and $HOME/.android/avd; relocate if avdmanager used XDG.
 TARGET="${ANDROID_AVD_HOME:-$HOME/.android/avd}"
 if [ "$AVD_DIR" != "$TARGET/$AVD.avd" ]; then
   mkdir -p "$TARGET"

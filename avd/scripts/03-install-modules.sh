@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Install the module stack (TEESimulator, ReZygisk, SUSFS, Integrity Box,
-# BetterKnownInstalled) + WebUI/manager apps, then reboot. Keybox is
-# auto-fetched by the installer.
+# Install the module stack (TEESimulator, ReZygisk, SUSFS, Integrity Box, BetterKnownInstalled) + WebUI/manager.
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
@@ -9,8 +7,7 @@ ADB="$AH/platform-tools/adb"
 TMP="/tmp/integrity-box-setup"
 mkdir -p "$TMP"
 
-# When MODULES_DIR is set (docker), modules are pre-baked in the image and we
-# skip the download. Otherwise fetch them from the pinned release URLs.
+# When MODULES_DIR is set (docker), modules are pre-baked in the image; else fetch from pinned URLs.
 if [ -n "${MODULES_DIR:-}" ]; then
   echo "Using pre-baked modules from $MODULES_DIR"
   cp "$MODULES_DIR"/teesimulator.zip "$MODULES_DIR"/rezygisk.zip \
@@ -37,8 +34,7 @@ else
   curl -fsSL -o "$TMP/ksunext.apk" "$KSU_NEXT_URL"
 fi
 
-# Fresh userdata has no /data/adb/ksud — the manager extracts it on first
-# launch. Bootstrap it BEFORE any su-based command.
+# Fresh userdata has no /data/adb/ksud; the manager extracts it on first launch. Bootstrap before su.
 echo "Bootstrapping KSU manager (extracts ksud, enables su)"
 "$ADB" install -r "$TMP/ksunext.apk"
 "$ADB" shell am start -n com.rifsxd.ksunext/.ui.MainActivity

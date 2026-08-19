@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Install the bindhosts module (systemless hosts / ad blocking).
-# Runs on first boot after the stack is up, so adb + su are available.
+# Install the bindhosts module (systemless hosts / ad blocking). Runs on first boot after the stack is up.
 set -euo pipefail
 
 ADB="${ADB:-/opt/android-sdk/platform-tools/adb}"

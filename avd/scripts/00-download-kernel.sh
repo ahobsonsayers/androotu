@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Download the prebuilt KSU/SUSFS kernel from the kernel-latest rolling GitHub
-# release into kernel/dist/bzImage-a36-btf. AVD users run this instead of
-# building the kernel themselves.
+# Download the prebuilt KSU/SUSFS kernel from the kernel-latest rolling GitHub release.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

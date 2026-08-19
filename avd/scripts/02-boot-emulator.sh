@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Boot the a36 emulator headless with the custom KSU/SUSFS kernel.
-# Use WIPE_DATA=1 for a clean first boot.
-# Docker: set FOREGROUND=1, DATA_IMG, SKIP_ADB_AUTH=1, WAIT_FOR_INI=1.
+# Boot a36 headless with the custom KSU/SUSFS kernel. WIPE_DATA=1=clean boot; Docker: FOREGROUND=1, DATA_IMG, SKIP_ADB_AUTH=1, WAIT_FOR_INI=1.
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
