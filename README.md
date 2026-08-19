@@ -75,15 +75,28 @@ docker run -d --name androotu \
   ghcr.io/ahobsonsayers/androotu:latest
 ```
 
-The repo ships two working examples in [`extensions/`](extensions/):
+The repo ships three working examples in [`extensions/`](extensions/):
 
-- `01-install-bindhosts-module.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`, then reboots to activate it.
-- `02-install-adaway-app.sh` — installs the [AdAway](https://github.com/AdAway/AdAway) app (open-source ad blocker) via `adb install`.
+- `install-module.sh` — installs the [bindhosts](https://github.com/bindhosts/bindhosts) module (systemless hosts / ad blocking) via `ksud module install`, then reboots to activate it.
+- `install-app-github.sh` — installs the [AdAway](https://github.com/AdAway/AdAway) app (open-source ad blocker) via `adb install`.
+- `install-app-gplay.sh` — installs [Integrity Check](https://play.google.com/store/apps/details?id=gr.nikolasspyr.integritycheck) from the Play Store via [gplaydl](https://github.com/rehmatworks/gplaydl), using the anonymous [Aurora dispenser](https://auroraoss.com) instead of a Google login, then reboots so [BetterKnownInstalled](https://github.com/Pixel-Props/BetterKnownInstalled) marks it as a Play Store install.
+
+> [!NOTE]
+> The A36 x86_64 Play Store image runs ARM apps through NDK translation
+> (`ro.dalvik.vm.native.bridge=libndk_translation.so`), so ARM builds fetched
+> from the Play Store install and run normally. The gplaydl example downloads
+> the `arm64` build for this reason.
+>
+> The Aurora dispenser (`https://auroraoss.com/api/auth`) is a shared,
+> rate-limited service run by the Aurora Store community. It's fine for a demo,
+> but don't rely on it for heavy or repeated use.
 
 > [!NOTE]
 > `ksud module install` only stages a module — it activates on the **next boot**.
 > The bindhosts example reboots the emulator to activate it. Apps installed via
-> `adb install` are active immediately.
+> `adb install` are active immediately, but the gplay example reboots anyway so
+> [BetterKnownInstalled](https://github.com/Pixel-Props/BetterKnownInstalled) can
+> re-mark the newly installed app as a Play Store install.
 
 Scripts run once per `/data` volume (first boot only). To re-run them, wipe the
 volume or remove `/data/.first-boot-done`.
