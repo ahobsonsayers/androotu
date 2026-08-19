@@ -8,17 +8,11 @@ PKG="gr.nikolasspyr.integritycheck"
 DISPENSER="https://auroraoss.com/api/auth"
 OUT="/tmp/gplaydl"
 
-echo "Installing gplaydl"
-python3 -m pip install --quiet gplaydl
-
 echo "Downloading $PKG from Play Store"
-gplaydl download "$PKG" -a arm64 -d "$DISPENSER" -o "$OUT"
+uv tool run gplaydl download "$PKG" -a arm64 -d "$DISPENSER" -o "$OUT"
 
 echo "Installing $PKG"
-for apk in "$OUT"/*.apk; do
-  [ -e "$apk" ] || continue
-  "$ADB" install -r "$apk"
-done
+"$ADB" install-multiple "$OUT"/*.apk
 
 echo "Rebooting so BetterKnownInstalled marks the app as Play Store-installed"
 "$ADB" reboot
