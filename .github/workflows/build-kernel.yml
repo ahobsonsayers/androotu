@@ -78,3 +78,17 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-kernel:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Trigger the emulator build once the kernel image is pushed, so its COPY --from resolves the fresh kernel.
+  dispatch-docker:
+    needs: image
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch build-docker
+        run: |
+          gh workflow run build-docker.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

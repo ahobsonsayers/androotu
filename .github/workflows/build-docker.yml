@@ -1,12 +1,12 @@
 name: build-docker
 
 on:
+  # build-kernel.yml dispatches this once the kernel image is pushed.
   workflow_dispatch:
   push:
     branches: [main]
     paths:
       - 'docker/**'
-      - 'kernel/**'
       - 'avd/scripts/**'
       - '.dockerignore'
 
