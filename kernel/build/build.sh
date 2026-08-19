@@ -47,18 +47,13 @@ CONFIG_LOCALVERSION="-android16-5-Pixel10Pro"
 CONFIG_DEFAULT_HOSTNAME="localhost"
 EOF
 
-# Disable full LTO (needs 5GB+ for vmlinux link → OOM on 8GB host). Use ThinLTO (~2GB).
+# Disable full LTO (5GB+ vmlinux link → OOM on 8GB host); use ThinLTO (~2GB).
 ./scripts/config --disable CONFIG_LTO_CLANG_FULL
 ./scripts/config --enable CONFIG_LTO_CLANG_THIN
-# Keep BTF ENABLED (do NOT disable): CONFIG_DEBUG_INFO_BTF_MODULES=y (selected by
-# BTF) changes `struct module` size (2 extra fields). Stock A36 vendor DLKMs
-# expect that layout — disabling BTF breaks loading every vendor module with
-# ".gnu.linkonce.this_module section size must match" → boot hang. Requires
-# pahole/dwarves (installed in kbuild Dockerfile).
-# Enable KSU debug mode so allow_shell=true by default (shell uid can use su)
+# Keep BTF ENABLED — disabling breaks vendor DLKM loading (`.gnu.linkonce.this_module` size mismatch → boot hang).
+# Enable KSU debug mode so allow_shell=true by default (shell uid can use su).
 ./scripts/config --enable CONFIG_KSU_DEBUG
-# Enable AVD virtio modules. A36 x86_64 ramdisk ships NO modules (stock kernel
-# has them built-in), so they MUST be =y here or rootfs won't mount.
+# Enable AVD virtio modules — A36 x86_64 ramdisk ships none, so they MUST be =y here or rootfs won't mount.
 ./scripts/config --enable CONFIG_PCI
 ./scripts/config --enable CONFIG_VIRTIO_BLK
 ./scripts/config --enable CONFIG_VIRTIO_CONSOLE

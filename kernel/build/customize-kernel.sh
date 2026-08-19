@@ -6,9 +6,7 @@ cd "${KERNEL_DIR}"
 
 MARKER='AVD_SPOOF_INJECTED'
 
-# 1. /proc/modules filter — hide emulator-fingerprint module names
-# In android13-5.15, module procfs is in kernel/module.c (single file).
-# In android15-6.6, it's split into kernel/module/procfs.c.
+# 1. /proc/modules filter — hide emulator-fingerprint module names (kernel/module/procfs.c on android15-6.6, module.c on android13-5.15).
 if [ -f kernel/module/procfs.c ]; then
   f=kernel/module/procfs.c
 else
@@ -62,10 +60,7 @@ open(path, 'w').write(src)
 PY
 fi
 
-# 2. /proc/cpuinfo — x86_64: replace "Android virtual processor" model name
-# SUSFS open_redirect + mount --bind handle the full fake file at runtime,
-# but some apps read cpuinfo via sysfs or other paths. Patch the model name
-# in the kernel as a defense-in-depth.
+# 2. /proc/cpuinfo — replace "Android virtual processor" model name (defense-in-depth; SUSFS bind-mounts a fake file at runtime).
 f=arch/x86/kernel/cpu/proc.c
 if grep -q "${MARKER}" "$f"; then
   echo "  - ${f}: already injected"
