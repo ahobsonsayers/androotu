@@ -36,7 +36,7 @@ RUN bash /work/scripts/build-all.sh
 RUN mkdir -p /kernel && cp /work/dist/bzImage /kernel/bzImage
 
 # Stage 2: the emulator runtime.
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 # Base tooling (mirrors dockerify-android).
 RUN apt-get update && \
@@ -50,7 +50,8 @@ RUN apt-get update && \
         libxext6 \
         openjdk-17-jdk-headless \
         python3 \
-        qemu-kvm \
+        python3-pip \
+        qemu-system-x86 \
         socat \
         supervisor \
         tzdata \
