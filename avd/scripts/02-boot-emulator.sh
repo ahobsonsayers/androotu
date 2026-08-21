@@ -49,8 +49,7 @@ fi
 
 ARGS=(-avd "$AVD" -no-window -no-audio -no-snapshot
   -memory 1536 -no-boot-anim -no-metrics -gpu "$GPU_MODE" "${EXTRA[@]}"
-  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE"
-  -feature -ModemSimulator)
+  -kernel "$KERNEL" -ramdisk "$RAMDISK_FILE")
 
 # Docker: run in the foreground so supervisor can manage/restart it.
 if [ "${FOREGROUND:-0}" = "1" ]; then
@@ -83,6 +82,7 @@ if [ "${BC:-}" != "1" ]; then
   echo "FAIL: boot timeout (360s)" >&2
   exit 1
 fi
+
 for i in $(seq 1 30); do
   "$ADB" shell true 2>/dev/null && {
     echo "ADB responsive."
