@@ -36,7 +36,7 @@ mode throughout; the keybox chain is valid, Google just grants DEVICE not
 STRONG.
 
 WebUI access: install **KsuWebUIStandalone** (`io.github.a13e300.ksuwebui`) +
-**KernelSU-Next manager v3.2.0** (must match kernel 33150; v3.3.0 manager
+**KernelSU-Next manager v3.2.0** (must match kernel 33129; v3.3.0 manager
 refuses to work). Launch directly:
 
 ```sh
@@ -72,6 +72,7 @@ Fix: `am force-stop io.github.a13e300.ksuwebui` + relaunch, wait 8–12 s.
 7. **ksud must match kernel uapi** — mismatch logs `Kernel and userspace uapi version mismatch! skip on_post_fs_data` and NO boot scripts run. Use `lib/x86_64/libksud.so` from the matching manager APK.
 8. **Never run the emulator in a long bash call** — tool timeout kills it. Use `setsid bash -c '... > log 2>&1' < /dev/null &` then poll `sys.boot_completed`.
 9. **`custom.pif.prop` 0-byte trap** — `cp` from a stale `/data/local/tmp/custom.pif.prop`. Always re-push from host first.
+10. **Don't disable ModemSimulator** — `-feature -ModemSimulator` kills the host modem simulator, but the guest `android.hardware.radio-service.ranchu` still spawns from init and SIGABRTs every ~5s with no peer. The modem simulator runs fine in containers (dockerify-android uses plain defaults). Match dockerify-android; don't add the flag.
 
 ## Commands
 

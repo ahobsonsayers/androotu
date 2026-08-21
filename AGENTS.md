@@ -16,7 +16,7 @@ task run              # install → boot → install:modules → configure → v
 task clean            # remove a36 AVD (keeps SDK + kernel)
 ```
 
-Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling release — AVD users don't build it), `avd/scripts/01-create-avd.sh` … `05-verify-setup.sh`, and `avd/scripts/06-verify-integrity.sh` (install SPIC, run a request, assert `MEETS_DEVICE_INTEGRITY`). Taskfile is thin — just calls `01`…`05`. `00` and `06` are standalone (not in the Taskfile chain).
+Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling release — AVD users don't build it; `kernel/build/` exists for rebuilds), `avd/scripts/01-create-avd.sh` … `05-verify-setup.sh`, and `avd/scripts/06-verify-integrity.sh` (install SPIC, run a request, assert `MEETS_DEVICE_INTEGRITY`). Taskfile is thin — just calls `01`…`05`. `00` and `06` are standalone (not in the Taskfile chain). `extensions/` holds opt-in first-boot install scripts (apps/modules) run by `docker/scripts/first-boot.sh` after the stack is up.
 
 ## The stack (don't get wrong)
 
@@ -24,7 +24,7 @@ Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling
 2. **Module install** = `adb shell su -c 'ksud module install /path.zip'` (KSU root, not Magisk). `su` works via `adb shell su -c` once the custom kernel boots.
 3. **Keybox is auto-managed** by the Integrity Box installer (GitHub auto-fetch). Never hand-edit `/data/adb/tricky_store/keybox.xml` or back it up — the module owns it.
 4. **Integrity Box module id = `playintegrityfix`** — cannot coexist with a separate PIF module.
-5. **Manager APK must be KernelSU-Next v3.2.0** (matches kernel ksud 33150). v3.3.0 refuses to work.
+5. **Manager APK must be KernelSU-Next v3.2.0** (pinned URL = `KernelSU_Next_v3.2.0_33129-release.apk`; must match the kernel's embedded ksud). v3.3.0 refuses to work.
 6. **WebUI access:** `adb shell am start -n io.github.a13e300.ksuwebui/.WebUIActivity -e id "playintegrityfix"`.
 
 ## The toggle combo that passes (canonical)
@@ -39,6 +39,7 @@ Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling
 - **`-avd a36`** (space), not `-avd-a36`.
 - Emulator bumps 1536MB → 2048MB internally regardless of `-memory`.
 - Never run the emulator in a long bash call — tool timeout kills it.
+- **Boot args match dockerify-android defaults** — no `-feature -ModemSimulator` (the modem simulator runs normally; disabling it caused a guest radio HAL crash-loop).
 
 ## WebUI gotchas
 
