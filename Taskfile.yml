@@ -28,7 +28,7 @@ tasks:
       - avd/scripts/04-configure.sh
 
   verify:
-    desc: Check the stack + TEESimulator GENERATE mode
+    desc: Check the stack + Tricky Store OSS keybox emulation
     cmds:
       - avd/scripts/05-verify-setup.sh
 

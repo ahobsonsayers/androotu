@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-# Verify the stack is healthy and the TEESimulator is in GENERATE mode.
+# Verify the stack is healthy and Tricky Store OSS keybox emulation is active.
 set -euo pipefail
 
 AH="${ANDROID_HOME:-$HOME/Android/Sdk}"
 ADB="$AH/platform-tools/adb"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
 OK=1
 
 # Nested `su root -c` is reliable on fresh AVDs. Commands must not contain single quotes.
@@ -40,21 +43,42 @@ echo "OK  abi=$PROP"
 PROVIDER=$(suroot 'grep "^spoofProvider=" /data/adb/modules/playintegrityfix/custom.pif.prop' | tr -d '\r\n')
 echo "OK  $PROVIDER"
 
-GEN=0
+TEE_STATUS=$(suroot 'cat /data/adb/tricky_store/tee_status.txt' 2>/dev/null || true)
+if echo "$TEE_STATUS" | grep -q "tee_broken=true"; then
+  echo "FAIL Tricky Store TEE broken (tee_status.txt tee_broken=true) — reboot" >&2
+  OK=0
+elif [ -s "$TEE_STATUS" ]; then
+  echo "OK  Tricky Store TEE status not broken"
+else
+  echo "WARN tee_status.txt missing or empty — module may not have run"
+fi
+
+LOG=""
 for _ in $(seq 1 20); do
-  GEN=$(suroot "logcat -d | grep -c \"Generating new attested key pair for alias:\"" | tr -d '\r\n') || true
-  [ "${GEN:-0}" -gt 0 ] 2>/dev/null && break
+  LOG=$(suroot 'logcat -d -s TrickyStoreOSS' 2>/dev/null || true)
+  echo "$LOG" | grep -qiE "inject" && break
   sleep 3
 done
-PATCH=$(suroot "logcat -d | grep -c \"patched certificate chain for KeyIdentifier(uid=10146\"" | tr -d '\r\n') || true
-if [ "${GEN:-0}" -gt 0 ] 2>/dev/null; then
-  echo "OK  TEESimulator GENERATE mode (fresh chain per request)"
+if echo "$LOG" | grep -qiE "inject"; then
+  echo "OK  Tricky Store injected into keystore"
 else
-  echo "FAIL TEESimulator not generating — check keybox + reboot" >&2
+  echo "FAIL Tricky Store not injected — check module + reboot" >&2
   OK=0
 fi
-if [ "${PATCH:-0}" -gt 0 ] 2>/dev/null; then
-  echo "WARN TEESimulator PATCH mode — reboot to restore GENERATE"
+
+KB_CHK="$TMP/kb.xml"
+if suroot 'cat /data/adb/tricky_store/keybox.xml' >"$KB_CHK" 2>/dev/null && [ -s "$KB_CHK" ] && \
+   bash "$SCRIPT_DIR/verify-keybox.sh" "$KB_CHK" >/dev/null 2>&1; then
+  echo "OK  hardware-rooted keybox at /data/adb/tricky_store/keybox.xml"
+else
+  echo "FAIL keybox missing or not hardware-rooted at /data/adb/tricky_store/keybox.xml" >&2
+  OK=0
+fi
+
+if echo "$LOG" | grep -qE "cert|chain|patch"; then
+  echo "OK  Tricky Store patch chain active"
+else
+  echo "WARN Tricky Store logcat shows no cert/chain activity yet"
 fi
 
 if [ "$OK" = "1" ]; then

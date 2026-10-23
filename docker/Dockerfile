@@ -64,16 +64,18 @@ COPY --from=kernel /kernel/bzImage /opt/kernel/bzImage-a36-btf
 # uv: self-contained static binary; runs CLI tools from PyPI in an isolated venv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Module zips + manager/WebUI APKs (rebuilt to refresh).
-ARG TEE_URL="https://github.com/JingMatrix/TEESimulator/releases/download/v3.2/TEESimulator-v3.2-67-Release.zip"
-ARG REZYGISK_URL="https://raw.githubusercontent.com/ThePedroo/RemoteFiles/refs/heads/main/ReZygisk/ReZygisk.zip"
-ARG SUSFS_URL="https://github.com/sidex15/susfs4ksu-module/releases/download/v1.5.2%2B_R27/ksu_module_susfs_1.5.2%2B.zip"
-ARG IB_URL="https://github.com/MeowDump/Integrity-Box/releases/download/v40/v40-Integrity-Box-05-08-2026.zip"
-ARG BKI_URL="https://github.com/Pixel-Props/BetterKnownInstalled/releases/download/1500/BetterKnownInstalled-v1.5.0.zip"
-ARG KSU_WEBUI_URL="https://github.com/5ec1cff/KsuWebUIStandalone/releases/download/v1.0/KsuWebUI-1.0-34-release.apk"
+# Module zips + manager/WebUI APKs (rebuilt to refresh). Latest STABLE releases.
+# Keybox module pin (Tricky Store OSS v3.1.0) — must accept ECDSA hardware keyboxes.
+ARG TEE_URL="https://github.com/beakthoven/TrickyStoreOSS/releases/download/v3.1.0/Tricky-Store-OSS-v3.1.0-172-41383f5-Release.zip"
+# Zygisk layer: MeowZygisk — same vendor as Integrity Box.
+ARG MEOWZYGISK_URL="https://github.com/MeowDump/MeowZygisk/releases/download/v3/v3-MeowZygisk-22-09-2026.zip"
+ARG SUSFS_URL="https://github.com/sidex15/susfs4ksu-module/releases/download/v1.5.2%2B_R28/ksu_module_susfs_1.5.2%2B.zip"
+ARG IB_URL="https://github.com/MeowDump/Integrity-Box/releases/download/v45/v45-Integrity-Box-18-10-2026.zip"
+ARG BKI_URL="https://github.com/Pixel-Props/BetterKnownInstalled/releases/download/1610/BetterKnownInstalled-v1.6.1.zip"
+ARG KSU_WEBUI_URL="https://github.com/MeowDump/KsuWebUIStandalone/releases/download/v2/v2-Meow-KsuWebUI.apk"
 ARG KSU_NEXT_URL="https://github.com/KernelSU-Next/KernelSU-Next/releases/download/v3.2.0/KernelSU_Next_v3.2.0_33129-release.apk"
-RUN curl -fsSL -o /root/modules/teesimulator.zip "$TEE_URL" && \
-    curl -fsSL -o /root/modules/rezygisk.zip "$REZYGISK_URL" && \
+RUN curl -fsSL -o /root/modules/tricky-store-oss.zip "$TEE_URL" && \
+    curl -fsSL -o /root/modules/meowzygisk.zip "$MEOWZYGISK_URL" && \
     curl -fsSL -o /root/modules/susfs.zip "$SUSFS_URL" && \
     curl -fsSL -o /root/modules/integrity-box.zip "$IB_URL" && \
     curl -fsSL -o /root/modules/better-known-installed.zip "$BKI_URL" && \
@@ -83,12 +85,25 @@ RUN curl -fsSL -o /root/modules/teesimulator.zip "$TEE_URL" && \
 # Canonical PIF profile (Supreme toggle combo).
 COPY avd/config/custom.pif.prop /root/modules/custom.pif.prop
 
+# Optional baked fallback keybox (used only when Integrity Box's runtime
+# fetch is missing or software-rooted). The real keybox is user-supplied and
+# gitignored — it is NEVER committed; avd/config/keybox.xml.example marks the slot.
+COPY avd/config/keybox.xml* /tmp/kb/
+
 # Supervisor + boot scripts. first-boot.sh runs avd/scripts once per /data.
 COPY docker/config/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/scripts/start-emulator.sh /root/start-emulator.sh
 COPY docker/scripts/first-boot.sh /root/first-boot.sh
 COPY avd/scripts /root/scripts
 RUN chmod +x /root/start-emulator.sh /root/first-boot.sh /root/scripts/*.sh
+
+# Bake and gate the fallback keybox only when a real one was supplied locally.
+RUN if [ -f /tmp/kb/keybox.xml ]; then \
+      mv /tmp/kb/keybox.xml /root/modules/keybox.xml && \
+      /root/scripts/verify-keybox.sh /root/modules/keybox.xml; \
+    else \
+      echo "No baked keybox supplied; Integrity Box fetches one at runtime"; \
+    fi
 
 EXPOSE 5554 5555
 

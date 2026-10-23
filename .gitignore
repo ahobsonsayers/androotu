@@ -5,3 +5,6 @@ kernel/dist/
 kernel/sources/
 *.img
 *.qcow2
+
+# Attestation key material — never commit
+**/keybox.xml

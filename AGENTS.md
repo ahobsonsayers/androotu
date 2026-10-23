@@ -9,9 +9,9 @@ Read `LEARNINGS.md` before touching the stack — it has the full `UNEVALUATED`�
 ```sh
 task install          # one-time: create the a36 AVD (avd/scripts/01)
 task boot             # boot headless with custom kernel (avd/scripts/02)
-task install:modules  # Integrity Box + WebUI/manager, reboot (avd/scripts/03)
+task install:modules  # module stack (IB first, Tricky Store OSS, MeowZygisk, SUSFS, BKI) + WebUI/manager, reboot
 task configure        # Supreme profile + toggles + GMS restart (avd/scripts/04)
-task verify           # stack + TEESimulator GENERATE check (avd/scripts/05)
+task verify           # stack + Tricky Store OSS keybox check (avd/scripts/05)
 task run              # install → boot → install:modules → configure → verify
 task clean            # remove a36 AVD (keeps SDK + kernel)
 ```
@@ -45,6 +45,27 @@ Scripts: `avd/scripts/00-download-kernel.sh` (fetch prebuilt kernel from rolling
 
 - KsuWebUI root process crashes intermittently (`ClassNotFoundException: RootServerMain`) and button taps stop navigating. Fix: `am force-stop io.github.a13e300.ksuwebui` + relaunch, wait 8–12 s.
 - Some WebUI buttons open Chrome externally (e.g. Set Profile) — go back and relaunch WebUIActivity.
+- Nested `adb shell su -c "su root -c 'CMD'"`: CMD must not contain any single quotes, and double-quoted nesting silently mangles escapes. Write file content with several plain `echo ... >> file` lines, never `printf '...\n...'`.
+
+## Module maintenance
+
+- When anything breaks or behaves oddly, **first try updating the baked
+  modules to their latest releases** (Integrity Box, Tricky Store OSS,
+  MeowZygisk, SUSFS, BetterKnownInstalled, KsuWebUI) before changing config
+  or scripts. Update the pinned URLs in `docker/Dockerfile` AND the
+  local-fallback branch of `avd/scripts/03-install-modules.sh` together.
+- Exception: the KernelSU-Next manager APK stays v3.2.0 — it must match the
+  kernel's embedded ksud (33129); newer managers refuse to work.
+- The keybox-module pin must accept ECDSA hardware keyboxes (Integrity Box
+  ships ECDSA boxes only).
+
+## Keybox
+
+- **Never commit `keybox.xml` or any attestation key material.** It is
+  gitignored (`**/keybox.xml`); `avd/config/keybox.xml.example` is the
+  committed placeholder. The real keybox stays local; the Docker build bakes
+  and hardware-root-gates it when present, skips the slot when absent, and
+  Integrity Box fetches a fresh hardware keybox at install time either way.
 
 ## Style
 

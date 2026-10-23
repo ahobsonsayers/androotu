@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<!-- Placeholder only: a real keybox must never be committed.
+     Supply avd/config/keybox.xml locally (Integrity Box-compatible format,
+     attestation chain rooted in "Key Attestation CA1"); the Docker build
+     bakes and gates it when present, and skips the slot when absent. -->
+<AndroidAttestation>
+    <NumberOfKeyboxes>0</NumberOfKeyboxes>
+</AndroidAttestation>

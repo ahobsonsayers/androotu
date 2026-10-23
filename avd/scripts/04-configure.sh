@@ -32,6 +32,16 @@ suroot "cp /data/local/tmp/custom.pif.prop $PIF && chmod 0644 $PIF"
 echo "Writing canonical custom.pif.prop"
 suroot "rm -f $BOX_DIR/pixelify $BOX_DIR/legacy $BOX_DIR/wipe && touch $BOX_DIR/advanced && chmod 0644 $BOX_DIR/advanced"
 
+# Tricky Store OSS reads its targets and patch level from here.
+TARGET_TXT=/data/adb/tricky_store/target.txt
+SEC_PATCH=/data/adb/tricky_store/security_patch.txt
+if ! suroot "test -f $TARGET_TXT"; then
+  suroot "mkdir -p /data/adb/tricky_store && echo com.google.android.gms > $TARGET_TXT && echo com.android.vending >> $TARGET_TXT && echo io.github.vvb2060.keyattestation >> $TARGET_TXT"
+fi
+if ! suroot "test -f $SEC_PATCH"; then
+  suroot "mkdir -p /data/adb/tricky_store && echo all=\$(getprop ro.build.version.security_patch) > $SEC_PATCH"
+fi
+
 echo "Restarting GMS + Play Store so the spoof applies"
 suroot 'am force-stop com.google.android.gms.unstable; am force-stop com.android.vending'
 
