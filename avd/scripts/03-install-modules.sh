@@ -57,7 +57,7 @@ install_module "BetterKnownInstalled" better-known-installed.zip
 # auto-fetches one at install; the baked (local-only) keybox is the fallback.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DST=/data/adb/tricky_store/keybox.xml
-KB_SRC="$MODULES_DIR/keybox.xml"
+KB_SRC="${MODULES_DIR:+$MODULES_DIR/keybox.xml}"
 [ -f "$KB_SRC" ] || KB_SRC="$SCRIPT_DIR/../config/keybox.xml"
 suroot() {
   "$ADB" shell su -c "su root -c '$1'" 2>/dev/null

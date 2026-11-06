@@ -2,6 +2,8 @@ name: verify-integrity
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
   workflow_run:
     workflows: [build-docker]
     types: [completed]
